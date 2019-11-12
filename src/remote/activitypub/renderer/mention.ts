@@ -4,6 +4,6 @@ import { Users } from '../../../models';
 
 export default (mention: User) => ({
 	type: 'Mention',
-	href: Users.isRemoteUser(mention) ? mention.uri : `${config.url}/@${(mention as LocalUser).username}`,
-	name: Users.isRemoteUser(mention) ? `@${mention.username}@${mention.host}` : `@${(mention as LocalUser).username}`,
+	href: isRemoteUser(mention) ? mention.uri : `${config.url}/@${(mention as LocalUser).username}`,
+	name: isRemoteUser(mention) ? `@${mention.username}@${mention.host}` : `@${(mention as LocalUser).username}`,
 });

@@ -76,7 +76,7 @@ export default class DeliverManager {
 	 * Execute delivers
 	 */
 	public async execute() {
-		if (!Users.isLocalUser(this.actor)) return;
+		if (!isLocalUser(this.actor)) return;
 
 		const inboxes: string[] = [];
 

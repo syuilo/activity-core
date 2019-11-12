@@ -1,4 +1,4 @@
-import { User, Note, File, Following } from './models';
+import { User, Note, File, Following, Blocking } from './models';
 
 type Maybe<T> = T | null | undefined;
 
@@ -12,4 +12,5 @@ export type DB = {
 	notes: DBTable<Note>;
 	files: DBTable<File>;
 	followings: DBTable<Following>;
+	blockings: DBTable<Blocking>;
 };

@@ -377,7 +377,7 @@ export function analyzeAttachments(attachments: ITag[]) {
 
 export async function updateFeatured(server: ApServer, userId: User['id']) {
 	const user = await Users.findOne(userId).then(ensure);
-	if (!Users.isRemoteUser(user)) return;
+	if (!isRemoteUser(user)) return;
 	if (!user.featured) return;
 
 	logger.info(`Updating the featured: ${user.uri}`);

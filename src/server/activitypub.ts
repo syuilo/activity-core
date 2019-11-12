@@ -123,7 +123,7 @@ export function createActivityPubRouter(server: ApServer) {
 
 		const keypair = await server.getUserKeypair(user.id);
 
-		if (Users.isLocalUser(user)) {
+		if (isLocalUser(user)) {
 			ctx.body = renderActivity(renderKey(user, keypair));
 			ctx.set('Cache-Control', 'public, max-age=180');
 			setResponseType(ctx);

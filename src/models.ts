@@ -1,5 +1,6 @@
 /**
  * Model type definitions
+ * and related functions
  */
 
 export type User = {
@@ -13,14 +14,17 @@ export type User = {
 	tags: string[];
 	isBot: boolean;
 	isLocked: boolean;
+	inbox: string | null;
 };
 
 export type LocalUser = User & {
 	host: null;
+	inbox: null;
 };
 
 export type RemoteUser = User & {
 	host: string;
+	inbox: string;
 };
 
 export type UserProfile = {
@@ -50,6 +54,20 @@ export type Following = {
 	followeeId: User['id'];
 };
 
+export type Blocking = {
+	id: string;
+	blockerId: User['id'];
+	blockeeId: User['id'];
+};
+
 export type Instance = {
 	infoUpdatedAt: Date;
 };
+
+export function isLocalUser(user: User): user is LocalUser {
+	return user.host === null;
+}
+
+export function isRemoteUser(user: User): user is RemoteUser {
+	return !isLocalUser(user);
+}

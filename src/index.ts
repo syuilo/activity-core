@@ -6,7 +6,7 @@ import { cerateWellKnownRouter } from './server/well-known';
 import { cerateNodeinfoRouter } from './server/nodeinfo';
 import { DB } from './db';
 import { Nodeinfo } from './nodeinfo';
-import { User, UserKeypair, UserProfile, RemoteUser, Note, Instance } from './models';
+import { User, UserKeypair, UserProfile, RemoteUser, Note, Instance, LocalUser } from './models';
 import { Queue } from './queue';
 
 export type Options = {
@@ -21,6 +21,8 @@ export type Options = {
 	onPersonRegistered?: (user: RemoteUser) => void;
 	getInstance?: (host: string) => Promise<Instance>;
 	setInstance?: (host: string, props: Record<string, any>) => Promise<void>;
+	follow: (follower: RemoteUser, followee: LocalUser) => void;
+	unblock: (blocker: RemoteUser, blockee: LocalUser) => void;
 };
 
 export class ApServer {
@@ -69,6 +71,14 @@ export class ApServer {
 
 	public get setInstance() {
 		return this.opts.setInstance;
+	}
+
+	public get follow() {
+		return this.opts.follow;
+	}
+
+	public get unblock() {
+		return this.opts.unblock;
 	}
 	//#endregion
 

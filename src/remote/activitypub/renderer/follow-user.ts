@@ -9,5 +9,5 @@ import { ensure } from '../../../prelude/ensure';
  */
 export default async function renderFollowUser(id: User['id']): Promise<any> {
 	const user = await Users.findOne(id).then(ensure);
-	return Users.isLocalUser(user) ? `${config.url}/users/${user.id}` : user.uri;
+	return isLocalUser(user) ? `${config.url}/users/${user.id}` : user.uri;
 }
