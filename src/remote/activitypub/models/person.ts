@@ -12,7 +12,7 @@ import { ITag, extractHashtags } from './tag';
 import { apLogger } from '../logger';
 import { Note } from '../../../models/entities/note';
 import { updateUsertags } from '../../../services/update-hashtag';
-import { Users, UserNotePinings, Instances, DriveFiles, Followings, UserProfiles, UserPublickeys } from '../../../models';
+import { Users, UserNotePinings, Instances, DriveFiles, Followings, UserProfiles, UserPublickeys, isRemoteUser } from '../../../models';
 import { User, RemoteUser } from '../../../models/entities/user';
 import { Emoji } from '../../../models/entities/emoji';
 import { UserNotePining } from '../../../models/entities/user-note-pinings';
@@ -118,7 +118,7 @@ export async function fetchPerson(server: ApServer, uri: string): Promise<User |
 export async function createPerson(server: ApServer, uri: string, resolver?: Resolver): Promise<User> {
 	if (typeof uri !== 'string') throw new Error('uri is not string');
 
-	if (resolver == null) resolver = new Resolver();
+	if (resolver == null) resolver = new Resolver(server);
 
 	const object = await resolver.resolve(uri) as any;
 
@@ -240,7 +240,7 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 	}
 	//#endregion
 
-	if (resolver == null) resolver = new Resolver();
+	if (resolver == null) resolver = new Resolver(server);
 
 	const object = hint || await resolver.resolve(uri) as any;
 
@@ -343,7 +343,7 @@ export async function resolvePerson(server: ApServer, uri: string, resolver?: Re
 	//#endregion
 
 	// リモートサーバーからフェッチしてきて登録
-	if (resolver == null) resolver = new Resolver();
+	if (resolver == null) resolver = new Resolver(server);
 	return await createPerson(server, uri, resolver);
 }
 
@@ -382,7 +382,7 @@ export async function updateFeatured(server: ApServer, userId: User['id']) {
 
 	logger.info(`Updating the featured: ${user.uri}`);
 
-	const resolver = new Resolver();
+	const resolver = new Resolver(server);
 
 	// Resolve to (Ordered)Collection Object
 	const collection = await resolver.resolveCollection(user.featured);

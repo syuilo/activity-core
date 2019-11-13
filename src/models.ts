@@ -16,6 +16,7 @@ export type User = {
 	isLocked: boolean;
 	isSuspended: boolean;
 	inbox: string | null;
+	featured: string | null;
 };
 
 export type LocalUser = User & {
