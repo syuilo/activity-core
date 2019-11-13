@@ -12,6 +12,7 @@ import { toArray } from '../../../prelude/array';
 import { ApServer } from '../../..';
 import { User, RemoteUser, isRemoteUser, Note } from '../../../models';
 import { fetchNodeinfo } from '../../fetch-nodeinfo';
+import { parseHtml } from '../../../parse-html';
 
 const logger = apLogger;
 
@@ -73,7 +74,7 @@ function validatePerson(x: any, uri: string) {
 /**
  * Personをフェッチします。
  *
- * Dolphinに対象のPersonが登録されていればそれを返します。
+ * サーバーに対象のPersonが登録されていればそれを返します。
  */
 export async function fetchPerson(server: ApServer, uri: string): Promise<User | null> {
 	if (typeof uri !== 'string') throw new Error('uri is not string');
@@ -131,6 +132,8 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 		name: person.name || null,
 		avatarId: null,
 		bannerId: null,
+		avatarUrl: null,
+		bannerUrl: null,
 		isLocked: !!person.manuallyApprovesFollowers,
 		username: person.preferredUsername!,
 		usernameLower: person.preferredUsername!.toLowerCase(),
@@ -143,7 +146,7 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 		isBot,
 		isSuspended: false,
 	}, {
-		description: person.summary ? fromHtml(person.summary) : null,
+		description: person.summary ? parseHtml(person.summary) : null,
 		url: person.url || null,
 		fields,
 		userHost: host,
@@ -156,21 +159,21 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 	fetchNodeinfo(server, host);
 
 	//#region アバターとヘッダー画像をフェッチ
-	const [avatar, banner] = (await Promise.all<DriveFile | null>([
+	const [avatar, banner] = await Promise.all([
 		person.icon,
 		person.image
 	].map(img =>
 		img == null
 			? Promise.resolve(null)
-			: resolveImage(user!, img).catch(() => null)
-	)));
+			: resolveImage(server, user!, img).catch(() => null)
+	));
 
 	const avatarId = avatar ? avatar.id : null;
 	const bannerId = banner ? banner.id : null;
-	const avatarUrl = avatar ? DriveFiles.getPublicUrl(avatar, true) : null;
-	const bannerUrl = banner ? DriveFiles.getPublicUrl(banner) : null;
+	const avatarUrl = avatar ? server.getFileUrl(avatar, true) : null;
+	const bannerUrl = banner ? server.getFileUrl(banner, false) : null;
 
-	await Users.update(user!.id, {
+	await server.db.users.update(user!.id, {
 		avatarId,
 		bannerId,
 		avatarUrl,
@@ -191,7 +194,7 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 
 	const emojiNames = emojis.map(emoji => emoji.name);
 
-	await Users.update(user!.id, {
+	await server.db.users.update(user!.id, {
 		emojis: emojiNames
 	});
 	//#endregion
@@ -203,7 +206,7 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 
 /**
  * Personの情報を更新します。
- * Dolphinに対象のPersonが登録されていなければ無視します。
+ * サーバーに対象のPersonが登録されていなければ無視します。
  * @param uri URI of Person
  * @param resolver Resolver
  * @param hint Hint of Person object (この値が正当なPersonの場合、Remote resolveをせずに更新に利用します)
@@ -239,7 +242,7 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 	logger.info(`Updating the Person: ${person.id}`);
 
 	// アバターとヘッダー画像をフェッチ
-	const [avatar, banner] = (await Promise.all<DriveFile | null>([
+	const [avatar, banner] = (await Promise.all<File | null>([
 		person.icon,
 		person.image
 	].map(img =>
@@ -274,12 +277,12 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 
 	if (avatar) {
 		updates.avatarId = avatar.id;
-		updates.avatarUrl = DriveFiles.getPublicUrl(avatar);
+		updates.avatarUrl = Files.getPublicUrl(avatar);
 	}
 
 	if (banner) {
 		updates.bannerId = banner.id;
-		updates.bannerUrl = DriveFiles.getPublicUrl(banner);
+		updates.bannerUrl = Files.getPublicUrl(banner);
 	}
 
 	// Update user
@@ -293,7 +296,7 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 	await UserProfiles.update({ userId: exist.id }, {
 		url: person.url,
 		fields,
-		description: person.summary ? fromHtml(person.summary) : null,
+		description: person.summary ? parseHtml(person.summary) : null,
 	});
 
 	// ハッシュタグ更新
@@ -312,8 +315,8 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 /**
  * Personを解決します。
  *
- * Dolphinに対象のPersonが登録されていればそれを返し、そうでなければ
- * リモートサーバーからフェッチしてDolphinに登録しそれを返します。
+ * サーバーに対象のPersonが登録されていればそれを返し、そうでなければ
+ * リモートサーバーからフェッチしてサーバーに登録しそれを返します。
  */
 export async function resolvePerson(server: ApServer, uri: string, resolver?: Resolver): Promise<User> {
 	if (typeof uri !== 'string') throw new Error('uri is not string');
@@ -351,7 +354,7 @@ export function analyzeAttachments(attachments: ITag[]) {
 		for (const attachment of attachments.filter(isPropertyValue)) {
 			fields.push({
 				name: attachment.name!,
-				value: fromHtml(attachment.value!)
+				value: parseHtml(attachment.value!)
 			});
 		}
 	}

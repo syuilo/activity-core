@@ -5,6 +5,7 @@ type Maybe<T> = T | null | undefined;
 export type DBTable<T extends { id: string; }> = {
 	find: (query: Partial<T>) => Promise<T[]>;
 	findOne: (query: T['id'] | Partial<T>) => Promise<Maybe<T>>;
+	update: (query: T['id'] | Partial<T>, fields: Partial<T>) => Promise<void>;
 };
 
 export type DB = {

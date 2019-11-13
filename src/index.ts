@@ -10,7 +10,7 @@ import { cerateWellKnownRouter } from './server/well-known';
 import { cerateNodeinfoRouter } from './server/nodeinfo';
 import { DB } from './db';
 import { Nodeinfo } from './nodeinfo';
-import { User, UserKeypair, UserProfile, RemoteUser, Note, Instance, LocalUser, UserPublickey } from './models';
+import { User, UserKeypair, UserProfile, RemoteUser, Note, Instance, LocalUser, UserPublickey, File } from './models';
 import { Queue } from './queue';
 
 export type Options = {
@@ -19,6 +19,8 @@ export type Options = {
 	proxy?: string;
 	db: DB;
 	queue: Queue;
+	fetchFile: (url: string, user: RemoteUser, isSensitive: boolean) => Promise<File>;
+	getFileUrl: (file: File, thumbnail: boolean) => string;
 	nodeinfo?: () => Promise<Nodeinfo>;
 	getUserKeypair: (userId: User['id']) => Promise<UserKeypair>;
 	getUserProfile: (userId: User['id']) => Promise<UserProfile>;
@@ -57,6 +59,14 @@ export class ApServer {
 
 	public get queue() {
 		return this.opts.queue;
+	}
+
+	public get fetchFile() {
+		return this.opts.fetchFile;
+	}
+
+	public get getFileUrl() {
+		return this.opts.getFileUrl;
 	}
 
 	public get getUserKeypair() {

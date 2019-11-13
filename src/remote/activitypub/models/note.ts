@@ -6,13 +6,13 @@ import post from '../../../services/note/create';
 import { resolvePerson, updatePerson } from './person';
 import { resolveImage } from './image';
 import { RemoteUser, User } from '../../../models/entities/user';
-import { fromHtml } from '../../../mfm/fromHtml';
+import { parseHtml } from '../../../mfm/parseHtml';
 import { ITag, extractHashtags } from './tag';
 import { unique, concat, difference } from '../../../prelude/array';
 import { extractPollFromQuestion } from './question';
 import vote from '../../../services/note/polls/vote';
 import { apLogger } from '../logger';
-import { DriveFile } from '../../../models/entities/drive-file';
+import { File } from '../../../models/entities/drive-file';
 import { deliverQuestionUpdate } from '../../../services/note/polls/update';
 import { extractDbHost, toPuny } from '../../../misc/convert-host';
 import { Notes, Emojis, Polls } from '../../../models';
@@ -51,7 +51,7 @@ export function validateNote(object: any, uri: string) {
 /**
  * Noteをフェッチします。
  *
- * Dolphinに対象のNoteが登録されていればそれを返します。
+ * サーバーに対象のNoteが登録されていればそれを返します。
  */
 export async function fetchNote(value: string | IObject, resolver?: Resolver): Promise<Note | null> {
 	const uri = getApId(value);
@@ -139,7 +139,7 @@ export async function createNote(value: string | IObject, resolver?: Resolver, s
 	note.attachment = Array.isArray(note.attachment) ? note.attachment : note.attachment ? [note.attachment] : [];
 	const files = note.attachment
 		.map(attach => attach.sensitive = note.sensitive)
-		? (await Promise.all(note.attachment.map(x => limit(() => resolveImage(actor, x)) as Promise<DriveFile>)))
+		? (await Promise.all(note.attachment.map(x => limit(() => resolveImage(actor, x)) as Promise<File>)))
 			.filter(image => image != null)
 		: [];
 
@@ -176,7 +176,7 @@ export async function createNote(value: string | IObject, resolver?: Resolver, s
 	const cw = note.summary === '' ? null : note.summary;
 
 	// テキストのパース
-	const text = note._misskey_content || (note.content ? fromHtml(note.content) : null);
+	const text = note._misskey_content || (note.content ? parseHtml(note.content) : null);
 
 	// vote
 	if (reply && reply.hasPoll) {
@@ -235,8 +235,8 @@ export async function createNote(value: string | IObject, resolver?: Resolver, s
 /**
  * Noteを解決します。
  *
- * Dolphinに対象のNoteが登録されていればそれを返し、そうでなければ
- * リモートサーバーからフェッチしてDolphinに登録しそれを返します。
+ * サーバーに対象のNoteが登録されていればそれを返し、そうでなければ
+ * リモートサーバーからフェッチしてサーバーに登録しそれを返します。
  */
 export async function resolveNote(value: string | IObject, resolver?: Resolver): Promise<Note | null> {
 	const uri = typeof value == 'string' ? value : value.id;

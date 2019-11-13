@@ -1,24 +1,19 @@
-import uploadFromUrl from '../../../services/drive/upload-from-url';
-import { RemoteUser } from '../../../models/entities/user';
 import Resolver from '../resolver';
-import { fetchMeta } from '../../../misc/fetch-meta';
-import { apLogger } from '../logger';
-import { DriveFile } from '../../../models/entities/drive-file';
-import { DriveFiles } from '../../../models';
-import { ensure } from '../../../prelude/ensure';
+import { File, RemoteUser } from '../../../models';
+import { ApServer } from '../../..';
 
 const logger = apLogger;
 
 /**
  * Imageを作成します。
  */
-export async function createImage(actor: RemoteUser, value: any): Promise<DriveFile> {
+export async function createImage(server: ApServer, actor: RemoteUser, value: any): Promise<File> {
 	// 投稿者が凍結されていたらスキップ
 	if (actor.isSuspended) {
 		throw new Error('actor has been suspended');
 	}
 
-	const image = await new Resolver().resolve(value) as any;
+	const image = await new Resolver(server).resolve(value) as any;
 
 	if (image.url == null) {
 		throw new Error('invalid image: url not privided');
@@ -26,23 +21,7 @@ export async function createImage(actor: RemoteUser, value: any): Promise<DriveF
 
 	logger.info(`Creating the Image: ${image.url}`);
 
-	const instance = await fetchMeta();
-	const cache = instance.cacheRemoteFiles;
-
-	let file = await uploadFromUrl(image.url, actor, null, image.url, image.sensitive, false, !cache);
-
-	if (file.isLink) {
-		// URLが異なっている場合、同じ画像が以前に異なるURLで登録されていたということなので、
-		// URLを更新する
-		if (file.url !== image.url) {
-			await DriveFiles.update({ id: file.id }, {
-				url: image.url,
-				uri: image.url
-			});
-
-			file = await DriveFiles.findOne(file.id).then(ensure);
-		}
-	}
+	const file = await server.fetchFile(image.url, actor, image.sensitive);
 
 	return file;
 }
@@ -50,12 +29,12 @@ export async function createImage(actor: RemoteUser, value: any): Promise<DriveF
 /**
  * Imageを解決します。
  *
- * Dolphinに対象のImageが登録されていればそれを返し、そうでなければ
- * リモートサーバーからフェッチしてDolphinに登録しそれを返します。
+ * サーバーに対象のImageが登録されていればそれを返し、そうでなければ
+ * リモートサーバーからフェッチしてサーバーに登録しそれを返します。
  */
-export async function resolveImage(actor: RemoteUser, value: any): Promise<DriveFile> {
+export async function resolveImage(server: ApServer, actor: RemoteUser, value: any): Promise<File> {
 	// TODO
 
 	// リモートサーバーからフェッチしてきて登録
-	return await createImage(actor, value);
+	return await createImage(server, actor, value);
 }

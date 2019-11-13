@@ -1,8 +1,8 @@
-import { DriveFile } from '../../../models/entities/drive-file';
-import { DriveFiles } from '../../../models';
+import { File } from '../../../models/entities/drive-file';
+import { Files } from '../../../models';
 
-export default (file: DriveFile) => ({
+export default (file: File) => ({
 	type: 'Document',
 	mediaType: file.type,
-	url: DriveFiles.getPublicUrl(file)
+	url: Files.getPublicUrl(file)
 });

@@ -5,8 +5,8 @@ import renderEmoji from './emoji';
 import config from '../../../config';
 import toHtml from '../misc/get-note-html';
 import { Note, IMentionedRemoteUsers } from '../../../models/entities/note';
-import { DriveFile } from '../../../models/entities/drive-file';
-import { DriveFiles, Notes, Users, Emojis, Polls } from '../../../models';
+import { File } from '../../../models/entities/drive-file';
+import { Files, Notes, Users, Emojis, Polls } from '../../../models';
 import { In } from 'typeorm';
 import { Emoji } from '../../../models/entities/emoji';
 import { Poll } from '../../../models/entities/poll';
@@ -15,8 +15,8 @@ import { ensure } from '../../../prelude/ensure';
 export default async function renderNote(note: Note, dive = true): Promise<any> {
 	const getPromisedFiles = async (ids: string[]) => {
 		if (!ids || ids.length === 0) return [];
-		const items = await DriveFiles.find({ id: In(ids) });
-		return ids.map(id => items.find(item => item.id === id)).filter(item => item != null) as DriveFile[];
+		const items = await Files.find({ id: In(ids) });
+		return ids.map(id => items.find(item => item.id === id)).filter(item => item != null) as File[];
 	};
 
 	let inReplyTo;

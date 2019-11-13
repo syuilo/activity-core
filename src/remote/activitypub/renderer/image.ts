@@ -1,8 +1,8 @@
-import { DriveFile } from '../../../models/entities/drive-file';
-import { DriveFiles } from '../../../models';
-
-export default (file: DriveFile) => ({
+export default (file: {
+	url: string;
+	isSensitive: boolean;
+}) => ({
 	type: 'Image',
-	url: DriveFiles.getPublicUrl(file),
+	url: file.url,
 	sensitive: file.isSensitive
 });

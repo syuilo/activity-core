@@ -12,11 +12,7 @@ import { LocalUser } from '../../../models';
 export async function renderPerson(server: ApServer, user: LocalUser) {
 	const id = `${server.url}/users/${user.id}`;
 
-	const [avatar, banner, profile] = await Promise.all([
-		user.avatarId ? server.db.files.findOne(user.avatarId) : Promise.resolve(undefined),
-		user.bannerId ? server.db.files.findOne(user.bannerId) : Promise.resolve(undefined),
-		server.getUserProfile(user.id)
-	]);
+	const profile = server.getUserProfile(user.id);
 
 	const attachment: {
 		type: 'PropertyValue',
@@ -63,8 +59,8 @@ export async function renderPerson(server: ApServer, user: LocalUser) {
 		preferredUsername: user.username,
 		name: user.name,
 		summary: toHtml(parse(profile.description)),
-		icon: avatar ? renderImage(avatar) : null,
-		image: banner ? renderImage(banner) : null,
+		icon: user.avatarUrl ? renderImage({ url: user.avatarUrl, isSensitive: false }) : null,
+		image: user.bannerUrl ? renderImage({ url: user.bannerUrl, isSensitive: false }) : null,
 		tag,
 		manuallyApprovesFollowers: user.isLocked,
 		publicKey: renderKey(user, keypair),

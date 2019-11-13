@@ -14,6 +14,8 @@ export type User = {
 	name: string | null;
 	avatarId: File['id'] | null;
 	bannerId: File['id'] | null;
+	avatarUrl: string | null;
+	bannerUrl: string | null;
 	tags: string[];
 	isBot: boolean;
 	isLocked: boolean;
@@ -34,7 +36,7 @@ export type RemoteUser = User & {
 };
 
 export type UserProfile = {
-	description: string;
+	description: string | null;
 	fields: { name: string; value: string; }[];
 	url: string | null;
 	userHost: string | null;
@@ -62,6 +64,9 @@ export type Note = {
 
 export type File = {
 	id: string;
+	url: string;
+	uri: string;
+	isSensitive: boolean;
 };
 
 export type Following = {
