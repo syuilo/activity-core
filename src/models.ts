@@ -23,6 +23,7 @@ export type User = {
 	inbox: string | null;
 	sharedInbox: string | null;
 	featured: string | null;
+	emojis: string[];
 };
 
 export type LocalUser = User & {
@@ -116,8 +117,12 @@ export type Instance = {
 };
 
 export type Emoji = {
+	id: string;
+	updatedAt: Date;
 	name: string;
 	url: string;
+	uri: string | null;
+	host: string | null;
 };
 
 export function isLocalUser(user: User): user is LocalUser {

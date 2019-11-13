@@ -46,7 +46,7 @@ async function acceptFollow(server: ApServer, actor: RemoteUser, activity: IFoll
 		return;
 	}
 
-	const follower = await server.db.users.findOne(userId);
+	const follower = await server.api.findUser(userId);
 
 	if (follower == null) {
 		throw new Error('follower not found');

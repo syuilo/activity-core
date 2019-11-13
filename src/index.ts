@@ -8,29 +8,64 @@ import * as httpsProxyAgent from 'https-proxy-agent';
 import { createActivityPubRouter } from './server/activitypub';
 import { cerateWellKnownRouter } from './server/well-known';
 import { cerateNodeinfoRouter } from './server/nodeinfo';
-import { DB } from './db';
 import { Nodeinfo } from './nodeinfo';
 import { User, UserKeypair, UserProfile, RemoteUser, Note, Instance, LocalUser, UserPublickey, File } from './models';
 import { Queue } from './queue';
+
+type Maybe<T> = T | null | undefined;
+
+type API = {
+	findUsers: (query: Partial<User>) => Promise<User[]>;
+
+	findUser: (query: User['id'] | Partial<User>) => Promise<Maybe<User>>;
+
+	createUser: (user: Omit<User, 'id'>, profile: UserProfile, key: UserPublickey) => Promise<User>;
+
+	/**
+	 * ユーザー情報を更新するハンドラ
+	 * ハッシュタグデータベースの更新も行うべき
+	 */
+	updateUser: (userId: User['id'], user: Partial<User>, profile: Partial<UserProfile>, key: Partial<UserPublickey>) => Promise<User>;
+
+	/**
+	 * ピン留めされた投稿を更新するハンドラ
+	 */
+	updateFeatured: (user: RemoteUser, ntoes: Note[]) => Promise<void>;
+
+	/**
+	 * ファイルをリモートサーバーからダウンロードするハンドラ
+	 */
+	createFile: (url: string, user: RemoteUser, isSensitive: boolean) => Promise<File>;
+
+	getUserKeypair: (userId: User['id']) => Promise<UserKeypair>;
+
+	getUserProfile: (userId: User['id']) => Promise<UserProfile>;
+
+	getFileUrl: (file: File, thumbnail: boolean) => string;
+
+	getBlockedHosts: () => string[];
+
+	getInstance?: (host: string) => Promise<Instance>;
+
+	setInstance?: (host: string, props: Record<string, any>) => Promise<void>;
+};
 
 export type Options = {
 	url: string;
 	userAgent?: string;
 	proxy?: string;
-	db: DB;
 	queue: Queue;
-	fetchFile: (url: string, user: RemoteUser, isSensitive: boolean) => Promise<File>;
-	getFileUrl: (file: File, thumbnail: boolean) => string;
+
 	nodeinfo?: () => Promise<Nodeinfo>;
-	getUserKeypair: (userId: User['id']) => Promise<UserKeypair>;
-	getUserProfile: (userId: User['id']) => Promise<UserProfile>;
-	saveUser: (user: Omit<User, 'id'>, profile: UserProfile, key: UserPublickey) => Promise<User>;
-	updateFeatured: (user: RemoteUser, ntoes: Note[]) => Promise<void>;
-	onPersonRegistered?: (user: RemoteUser) => void;
-	getInstance?: (host: string) => Promise<Instance>;
-	setInstance?: (host: string, props: Record<string, any>) => Promise<void>;
-	follow: (follower: RemoteUser, followee: LocalUser) => void;
-	unblock: (blocker: RemoteUser, blockee: LocalUser) => void;
+
+	api: API;
+
+	handlers: {
+		/**
+		 * 新しいアカウントが登録されたときに呼ばれます
+		 */
+		onPersonRegistered?: (user: RemoteUser) => void;
+	};
 };
 
 export class ApServer {
@@ -53,56 +88,16 @@ export class ApServer {
 		return this.opts.userAgent || 'ActivityCore';
 	}
 
-	public get db() {
-		return this.opts.db;
+	public get api() {
+		return this.opts.api;
+	}
+
+	public get handlers() {
+		return this.opts.handlers;
 	}
 
 	public get queue() {
 		return this.opts.queue;
-	}
-
-	public get fetchFile() {
-		return this.opts.fetchFile;
-	}
-
-	public get getFileUrl() {
-		return this.opts.getFileUrl;
-	}
-
-	public get getUserKeypair() {
-		return this.opts.getUserKeypair;
-	}
-
-	public get getUserProfile() {
-		return this.opts.getUserProfile;
-	}
-
-	public get saveUser() {
-		return this.opts.saveUser;
-	}
-
-	public get updateFeatured() {
-		return this.opts.updateFeatured;
-	}
-
-	public get onPersonRegistered() {
-		return this.opts.onPersonRegistered;
-	}
-
-	public get getInstance() {
-		return this.opts.getInstance;
-	}
-
-	public get setInstance() {
-		return this.opts.setInstance;
-	}
-
-	public get follow() {
-		return this.opts.follow;
-	}
-
-	public get unblock() {
-		return this.opts.unblock;
 	}
 	//#endregion
 

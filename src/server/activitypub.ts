@@ -6,14 +6,13 @@ import { renderActivity } from '../remote/activitypub/renderer';
 import renderNote from '../remote/activitypub/renderer/note';
 import renderKey from '../remote/activitypub/renderer/key';
 import { renderPerson } from '../remote/activitypub/renderer/person';
-import renderEmoji from '../remote/activitypub/renderer/emoji';
 import Outbox, { packActivity } from './activitypub/outbox';
 import Followers from './activitypub/followers';
 import Following from './activitypub/following';
 import Featured from './activitypub/featured';
 import { isSelfHost } from '../misc/convert-host';
-import { ensure } from '../prelude/ensure';
 import { ApServer } from '..';
+import { isLocalUser, User, LocalUser } from '../models';
 
 function inbox(ctx: Router.RouterContext) {
 	let signature;
@@ -114,7 +113,7 @@ export function createActivityPubRouter(server: ApServer) {
 	router.get('/users/:user/publickey', async ctx => {
 		const userId = ctx.params.user;
 
-		const user = await server.db.users.findOne(userId);
+		const user = await server.api.findUser(userId);
 
 		if (user == null || user.host !== null) {
 			ctx.status = 404;
@@ -133,13 +132,13 @@ export function createActivityPubRouter(server: ApServer) {
 	});
 
 	// user
-	async function userInfo(ctx: Router.RouterContext, user: User | undefined) {
+	async function userInfo(ctx: Router.RouterContext, user: User | null | undefined) {
 		if (user == null) {
 			ctx.status = 404;
 			return;
 		}
 
-		ctx.body = renderActivity(await renderPerson(user as LocalUser));
+		ctx.body = renderActivity(await renderPerson(server, user as LocalUser));
 		ctx.set('Cache-Control', 'public, max-age=180');
 		setResponseType(ctx);
 	}
@@ -149,7 +148,7 @@ export function createActivityPubRouter(server: ApServer) {
 
 		const userId = ctx.params.user;
 
-		const user = await Users.findOne({
+		const user = await server.api.findUser({
 			id: userId,
 			host: null
 		});
@@ -160,12 +159,29 @@ export function createActivityPubRouter(server: ApServer) {
 	router.get('/@:user', async (ctx, next) => {
 		if (!isActivityPubReq(ctx)) return await next();
 
-		const user = await Users.findOne({
+		const user = await server.api.findUser({
 			usernameLower: ctx.params.user.toLowerCase(),
 			host: null
 		});
 
 		await userInfo(ctx, user);
+	});
+
+	// emoji
+	router.get('/emojis/:emoji', async ctx => {
+		const emoji = await server.db.emojis.findOne({
+			host: null,
+			name: ctx.params.emoji
+		});
+
+		if (emoji == null) {
+			ctx.status = 404;
+			return;
+		}
+
+		ctx.body = renderActivity(await renderEmoji(emoji));
+		ctx.set('Cache-Control', 'public, max-age=180');
+		setResponseType(ctx);
 	});
 
 	return router;

@@ -19,7 +19,7 @@ export default async (server: ApServer, actor: RemoteUser, activity: IFollow): P
 		return;
 	}
 
-	const followee = await server.db.users.findOne(userId);
+	const followee = await server.api.findUser(userId);
 
 	if (followee == null) {
 		throw new Error('followee not found');
@@ -48,7 +48,7 @@ export default async (server: ApServer, actor: RemoteUser, activity: IFollow): P
 		return;
 	} else if (blocking) {
 		// リモートフォローを受けてブロックされているはずの場合だったら、ブロック解除しておく。
-		await server.unblock(follower, followee);
+		//TODO: delete blocking doc
 	} else {
 		// それ以外は単純に例外
 		if (blocking != null) throw new ApError('710e8fb0-b8c3-4922-be49-d5d93d8e6a6e', 'blocking');
@@ -70,10 +70,8 @@ export default async (server: ApServer, actor: RemoteUser, activity: IFollow): P
 		}
 	}
 
-	await server.follow(followee, follower);
+	//TODO: insert following doc
 
-	if (isRemoteUser(follower) && isLocalUser(followee)) {
-		const content = renderActivity(renderAccept(renderFollow(follower, followee, activity.id), followee));
-		server.queue.deliver(followee, content, follower.inbox);
-	}
+	const content = renderActivity(renderAccept(renderFollow(follower, followee, activity.id), followee));
+	server.queue.deliver(followee, content, follower.inbox);
 };

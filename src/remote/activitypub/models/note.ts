@@ -2,7 +2,13 @@ import * as promiseLimit from 'promise-limit';
 import Resolver from '../resolver';
 import { IObject, INote, getApIds, getOneApId, getApId, validPost } from '../type';
 import { getApLock } from '../../../misc/app-lock';
-import { Emoji } from '../../../models';
+import { Emoji, Note, User, RemoteUser } from '../../../models';
+import { parseHtml } from '../../../parse-html';
+import { resolvePerson } from './person';
+import { ApServer } from '../../..';
+import { resolveImage } from './image';
+import { ITag } from './tag';
+import { toPuny } from '../../../misc/convert-host';
 
 const logger = apLogger;
 
@@ -56,8 +62,8 @@ export async function fetchNote(value: string | IObject, resolver?: Resolver): P
 /**
  * Noteを作成します。
  */
-export async function createNote(value: string | IObject, resolver?: Resolver, silent = false): Promise<Note | null> {
-	if (resolver == null) resolver = new Resolver();
+export async function createNote(server: ApServer, value: string | IObject, resolver?: Resolver, silent = false): Promise<Note | null> {
+	if (resolver == null) resolver = new Resolver(server);
 
 	const object: any = await resolver.resolve(value);
 
@@ -101,7 +107,7 @@ export async function createNote(value: string | IObject, resolver?: Resolver, s
 			visibility = 'followers';
 		} else {
 			visibility = 'specified';
-			visibleUsers = await Promise.all(to.map(uri => resolvePerson(uri, resolver)));
+			visibleUsers = await Promise.all(to.map(uri => resolvePerson(server, uri, resolver)));
 		}
 	}
 	//#endergion
@@ -119,7 +125,7 @@ export async function createNote(value: string | IObject, resolver?: Resolver, s
 	note.attachment = Array.isArray(note.attachment) ? note.attachment : note.attachment ? [note.attachment] : [];
 	const files = note.attachment
 		.map(attach => attach.sensitive = note.sensitive)
-		? (await Promise.all(note.attachment.map(x => limit(() => resolveImage(actor, x)) as Promise<File>)))
+		? (await Promise.all(note.attachment.map(x => limit(() => resolveImage(server, actor, x)) as Promise<File>)))
 			.filter(image => image != null)
 		: [];
 
@@ -218,13 +224,12 @@ export async function createNote(value: string | IObject, resolver?: Resolver, s
  * サーバーに対象のNoteが登録されていればそれを返し、そうでなければ
  * リモートサーバーからフェッチしてサーバーに登録しそれを返します。
  */
-export async function resolveNote(value: string | IObject, resolver?: Resolver): Promise<Note | null> {
+export async function resolveNote(server: ApServer, value: string | IObject, resolver?: Resolver): Promise<Note | null> {
 	const uri = typeof value == 'string' ? value : value.id;
 	if (uri == null) throw new Error('missing uri');
 
 	// ブロックしてたら中断
-	const meta = await fetchMeta();
-	if (meta.blockedHosts.includes(extractDbHost(uri))) throw { statusCode: 451 };
+	if (server.getBlockedHosts().includes(extractDbHost(uri))) throw { statusCode: 451 };
 
 	const unlock = await getApLock(uri);
 
@@ -240,13 +245,13 @@ export async function resolveNote(value: string | IObject, resolver?: Resolver):
 		// リモートサーバーからフェッチしてきて登録
 		// ここでuriの代わりに添付されてきたNote Objectが指定されていると、サーバーフェッチを経ずにノートが生成されるが
 		// 添付されてきたNote Objectは偽装されている可能性があるため、常にuriを指定してサーバーフェッチを行う。
-		return await createNote(uri, resolver, true);
+		return await createNote(server, uri, resolver, true);
 	} finally {
 		unlock();
 	}
 }
 
-export async function extractEmojis(tags: ITag[], host: string): Promise<Emoji[]> {
+export async function extractEmojis(server: ApServer, tags: ITag[], host: string): Promise<Emoji[]> {
 	host = toPuny(host);
 
 	if (!tags) return [];
@@ -256,7 +261,7 @@ export async function extractEmojis(tags: ITag[], host: string): Promise<Emoji[]
 	return await Promise.all(eomjiTags.map(async tag => {
 		const name = tag.name!.replace(/^:/, '').replace(/:$/, '');
 
-		const exists = await Emojis.findOne({
+		const exists = await server.db.emojis.findOne({
 			host,
 			name
 		});
@@ -267,7 +272,7 @@ export async function extractEmojis(tags: ITag[], host: string): Promise<Emoji[]
 				|| (tag.updated != null && exists.updatedAt != null && new Date(tag.updated) > exists.updatedAt)
 				|| (tag.icon!.url !== exists.url)
 			) {
-				await Emojis.update({
+				await server.db.emojis.update({
 					host,
 					name,
 				}, {
@@ -276,10 +281,10 @@ export async function extractEmojis(tags: ITag[], host: string): Promise<Emoji[]
 					updatedAt: new Date(),
 				});
 
-				return await Emojis.findOne({
+				return (await server.db.emojis.findOne({
 					host,
 					name
-				}) as Emoji;
+				}))!;
 			}
 
 			return exists;
@@ -287,25 +292,23 @@ export async function extractEmojis(tags: ITag[], host: string): Promise<Emoji[]
 
 		logger.info(`register emoji host=${host}, name=${name}`);
 
-		return await Emojis.save({
-			id: genId(),
+		return await server.db.emojis.save({
 			host,
 			name,
 			uri: tag.id,
 			url: tag.icon!.url,
 			updatedAt: new Date(),
-			aliases: []
-		} as Partial<Emoji>);
+		});
 	}));
 }
 
-async function extractMentionedUsers(actor: RemoteUser, to: string[], cc: string[], resolver: Resolver) {
+async function extractMentionedUsers(server: ApServer, actor: RemoteUser, to: string[], cc: string[], resolver: Resolver) {
 	const ignoreUris = ['https://www.w3.org/ns/activitystreams#Public', `${actor.uri}/followers`];
 	const uris = difference(unique(concat([to || [], cc || []])), ignoreUris);
 
 	const limit = promiseLimit<User | null>(2);
 	const users = await Promise.all(
-		uris.map(uri => limit(() => resolvePerson(uri, resolver).catch(() => null)) as Promise<User | null>)
+		uris.map(uri => limit(() => resolvePerson(server, uri, resolver).catch(() => null)) as Promise<User | null>)
 	);
 
 	return users.filter(x => x != null) as User[];

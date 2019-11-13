@@ -83,11 +83,11 @@ export async function fetchPerson(server: ApServer, uri: string): Promise<User |
 	if (uri.startsWith(server.url + '/')) {
 		const id = uri.split('/').pop();
 		if (id == null) throw new Error('invalud uri');
-		return await server.db.users.findOne(id).then(x => x || null);
+		return await server.api.findUser(id).then(x => x || null);
 	}
 
 	//#region このサーバーに既に登録されていたらそれを返す
-	const exist = await server.db.users.findOne({ uri });
+	const exist = await server.api.findUser({ uri });
 
 	if (exist) {
 		return exist;
@@ -126,7 +126,7 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 	const isBot = object.type == 'Service';
 
 	// Create user
-	const user = await server.saveUser({
+	const user = await server.api.createUser({
 		createdAt: new Date(),
 		lastFetchedAt: new Date(),
 		name: person.name || null,
@@ -141,6 +141,7 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 		inbox: person.inbox!,
 		sharedInbox: person.sharedInbox || (person.endpoints ? person.endpoints.sharedInbox || null : null),
 		featured: person.featured ? getApId(person.featured) : null,
+		emojis: [],
 		uri: person.id!,
 		tags,
 		isBot,
@@ -155,7 +156,7 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 		keyPem: person.publicKey.publicKeyPem,
 	}) as RemoteUser;
 
-	if (server.onPersonRegistered) server.onPersonRegistered(user);
+	if (server.handlers.onPersonRegistered) server.handlers.onPersonRegistered(user);
 	fetchNodeinfo(server, host);
 
 	//#region アバターとヘッダー画像をフェッチ
@@ -170,8 +171,8 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 
 	const avatarId = avatar ? avatar.id : null;
 	const bannerId = banner ? banner.id : null;
-	const avatarUrl = avatar ? server.getFileUrl(avatar, true) : null;
-	const bannerUrl = banner ? server.getFileUrl(banner, false) : null;
+	const avatarUrl = avatar ? server.api.getFileUrl(avatar, true) : null;
+	const bannerUrl = banner ? server.api.getFileUrl(banner, false) : null;
 
 	await server.db.users.update(user!.id, {
 		avatarId,
@@ -187,7 +188,7 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 	//#endregion
 
 	//#region カスタム絵文字取得
-	const emojis = await extractEmojis(person.tag || [], host).catch(e => {
+	const emojis = await extractEmojis(server, person.tag || [], host).catch(e => {
 		logger.info(`extractEmojis: ${e}`);
 		return [] as Emoji[];
 	});
@@ -199,7 +200,7 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 	});
 	//#endregion
 
-	await updateFeatured(server, user!.id).catch(err => logger.error(err));
+	await updateFeatured(server, user!).catch(err => logger.error(err));
 
 	return user!;
 }
@@ -220,7 +221,7 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 	}
 
 	//#region このサーバーに既に登録されているか
-	const exist = await server.db.users.findOne({ uri }) as RemoteUser;
+	const exist = await server.api.findUser({ uri }) as RemoteUser;
 
 	if (exist == null) {
 		return;
@@ -242,17 +243,17 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 	logger.info(`Updating the Person: ${person.id}`);
 
 	// アバターとヘッダー画像をフェッチ
-	const [avatar, banner] = (await Promise.all<File | null>([
+	const [avatar, banner] = await Promise.all([
 		person.icon,
 		person.image
 	].map(img =>
 		img == null
 			? Promise.resolve(null)
-			: resolveImage(exist, img).catch(() => null)
-	)));
+			: resolveImage(server, exist, img).catch(() => null)
+	));
 
 	// カスタム絵文字取得
-	const emojis = await extractEmojis(person.tag || [], exist.host).catch(e => {
+	const emojis = await extractEmojis(server, person.tag || [], exist.host).catch(e => {
 		logger.info(`extractEmojis: ${e}`);
 		return [] as Emoji[];
 	});
@@ -277,39 +278,32 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 
 	if (avatar) {
 		updates.avatarId = avatar.id;
-		updates.avatarUrl = Files.getPublicUrl(avatar);
+		updates.avatarUrl = server.api.getFileUrl(avatar, true);
 	}
 
 	if (banner) {
 		updates.bannerId = banner.id;
-		updates.bannerUrl = Files.getPublicUrl(banner);
+		updates.bannerUrl = server.api.getFileUrl(banner, false);
 	}
 
 	// Update user
-	await Users.update(exist.id, updates);
-
-	await UserPublickeys.update({ userId: exist.id }, {
+	await server.api.updateUser(exist.id, updates, {
+		url: person.url,
+		fields,
+		description: person.summary ? parseHtml(person.summary) : null,
+	}, {
 		keyId: person.publicKey.id,
 		keyPem: person.publicKey.publicKeyPem
 	});
 
-	await UserProfiles.update({ userId: exist.id }, {
-		url: person.url,
-		fields,
-		description: person.summary ? parseHtml(person.summary) : null,
-	});
-
-	// ハッシュタグ更新
-	updateUsertags(exist, tags);
-
 	// 該当ユーザーが既にフォロワーになっていた場合はFollowingもアップデートする
-	await Followings.update({
+	await server.db.followings.update({
 		followerId: exist.id
 	}, {
 		followerSharedInbox: person.sharedInbox || (person.endpoints ? person.endpoints.sharedInbox : undefined)
 	});
 
-	await updateFeatured(server, exist.id).catch(err => logger.error(err));
+	await updateFeatured(server, exist).catch(err => logger.error(err));
 }
 
 /**
@@ -362,10 +356,7 @@ export function analyzeAttachments(attachments: ITag[]) {
 	return { fields };
 }
 
-export async function updateFeatured(server: ApServer, userId: User['id']) {
-	const user = await server.db.users.findOne(userId);
-	if (user == null) return;
-	if (!isRemoteUser(user)) return;
+export async function updateFeatured(server: ApServer, user: RemoteUser) {
 	if (!user.featured) return;
 
 	logger.info(`Updating the featured: ${user.uri}`);
@@ -385,9 +376,9 @@ export async function updateFeatured(server: ApServer, userId: User['id']) {
 	const featuredNotes = (await Promise.all(items
 		.filter(item => item.type === 'Note')
 		.slice(0, 5)
-		.map(item => limit(() => resolveNote(item, resolver))))
+		.map(item => limit(() => resolveNote(server, item, resolver))))
 	).filter(note => note != null);
 
 	// Update
-	await server.updateFeatured(user, featuredNotes);
+	await server.updateFeatured(user, featuredNotes as Note[]);
 }
