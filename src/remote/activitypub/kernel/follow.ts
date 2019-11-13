@@ -25,7 +25,7 @@ export default async (server: ApServer, actor: RemoteUser, activity: IFollow): P
 		throw new Error('followee not found');
 	}
 
-	if (followee.host != null) {
+	if (!isLocalUser(followee)) {
 		throw new Error('フォローしようとしているユーザーはローカルユーザーではありません');
 	}
 
@@ -41,12 +41,12 @@ export default async (server: ApServer, actor: RemoteUser, activity: IFollow): P
 		})
 	]);
 
-	if (isRemoteUser(follower) && isLocalUser(followee) && blocked) {
+	if (blocked) {
 		// リモートフォローを受けてブロックしていた場合は、エラーにするのではなくRejectを送り返しておしまい。
 		const content = renderActivity(renderReject(renderFollow(follower, followee, activity.id), followee));
-		deliver(followee , content, follower.inbox);
+		server.queue.deliver(followee, content, follower.inbox);
 		return;
-	} else if (isRemoteUser(follower) && isLocalUser(followee) && blocking) {
+	} else if (blocking) {
 		// リモートフォローを受けてブロックされているはずの場合だったら、ブロック解除しておく。
 		await server.unblock(follower, followee);
 	} else {
@@ -74,6 +74,6 @@ export default async (server: ApServer, actor: RemoteUser, activity: IFollow): P
 
 	if (isRemoteUser(follower) && isLocalUser(followee)) {
 		const content = renderActivity(renderAccept(renderFollow(follower, followee, activity.id), followee));
-		deliver(followee, content, follower.inbox);
+		server.queue.deliver(followee, content, follower.inbox);
 	}
 };
