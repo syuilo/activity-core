@@ -1,5 +1,4 @@
 import { IObject, isCreate, isDelete, isUpdate, isFollow, isAccept, isReject, isAdd, isRemove, isAnnounce, isLike, isUndo, isBlock, isCollectionOrOrderedCollection, isCollection  } from '../type';
-import { RemoteUser } from '../../../models/entities/user';
 import create from './create';
 import performDeleteActivity from './delete';
 import performUpdateActivity from './update';
@@ -15,24 +14,26 @@ import block from './block';
 import { apLogger } from '../logger';
 import Resolver from '../resolver';
 import { toArray } from '../../../prelude/array';
+import { ApServer } from '../../..';
+import { RemoteUser } from '../../../models';
 
-export async function performActivity(actor: RemoteUser, activity: IObject) {
+export async function performActivity(server: ApServer, actor: RemoteUser, activity: IObject) {
 	if (isCollectionOrOrderedCollection(activity)) {
 		const resolver = new Resolver();
 		for (const item of toArray(isCollection(activity) ? activity.items : activity.orderedItems)) {
 			const act = await resolver.resolve(item);
 			try {
-				await performOneActivity(actor, act);
+				await performOneActivity(server, actor, act);
 			} catch (e) {
 				apLogger.error(e);
 			}
 		}
 	} else {
-		await performOneActivity(actor, activity);
+		await performOneActivity(server, actor, activity);
 	}
 }
 
-async function performOneActivity(actor: RemoteUser, activity: IObject): Promise<void> {
+async function performOneActivity(server: ApServer, actor: RemoteUser, activity: IObject): Promise<void> {
 	if (actor.isSuspended) return;
 
 	if (isCreate(activity)) {
@@ -42,7 +43,7 @@ async function performOneActivity(actor: RemoteUser, activity: IObject): Promise
 	} else if (isUpdate(activity)) {
 		await performUpdateActivity(actor, activity);
 	} else if (isFollow(activity)) {
-		await follow(actor, activity);
+		await follow(server, actor, activity);
 	} else if (isAccept(activity)) {
 		await accept(actor, activity);
 	} else if (isReject(activity)) {

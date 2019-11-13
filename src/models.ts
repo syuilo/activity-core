@@ -14,6 +14,7 @@ export type User = {
 	tags: string[];
 	isBot: boolean;
 	isLocked: boolean;
+	isSuspended: boolean;
 	inbox: string | null;
 };
 
@@ -34,6 +35,7 @@ export type UserProfile = {
 
 export type UserKeypair = {
 	publicKey: string;
+	privateKey: string;
 };
 
 export type Note = {
@@ -41,6 +43,8 @@ export type Note = {
 	uri: string | null;
 	visibility: 'public' | 'home' | 'followers' | 'specified';
 	userHost: User['host'];
+	text: string | null;
+	renoteId: Note['id'] | null;
 	tags: string[];
 };
 

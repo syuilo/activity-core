@@ -1,6 +1,10 @@
 import * as Koa from 'koa';
 import * as Router from '@koa/router';
-
+import * as https from 'https';
+import { sign } from 'http-signature';
+import * as crypto from 'crypto';
+import * as cache from 'lookup-dns-cache';
+import * as httpsProxyAgent from 'https-proxy-agent';
 import { createActivityPubRouter } from './server/activitypub';
 import { cerateWellKnownRouter } from './server/well-known';
 import { cerateNodeinfoRouter } from './server/nodeinfo';
@@ -11,6 +15,8 @@ import { Queue } from './queue';
 
 export type Options = {
 	url: string;
+	userAgent?: string;
+	proxy?: string;
 	db: DB;
 	queue: Queue;
 	nodeinfo?: () => Promise<Nodeinfo>;
@@ -35,6 +41,10 @@ export class ApServer {
 
 	public get host() {
 		return new URL(this.url).host;
+	}
+
+	public get userAgent() {
+		return this.opts.userAgent || 'ActivityCore';
 	}
 
 	public get db() {
@@ -82,8 +92,16 @@ export class ApServer {
 	}
 	//#endregion
 
+	private agent: https.Agent;
+
 	constructor(app: Koa, opts: Options) {
 		this.opts = opts;
+
+		this.agent = opts.proxy
+			? new httpsProxyAgent(opts.proxy)
+			: new https.Agent({
+					lookup: cache.lookup,
+				});
 
 		// Init router
 		const router = new Router();
@@ -107,13 +125,11 @@ export class ApServer {
 		}
 	}
 
-	public deliverLocalNoteDeleted(note: Note) {
+	public async deliverLocalNoteDeleted(note: Note) {
 		let renote: Note | undefined;
 
 		if (note.renoteId && note.text == null && !note.hasPoll && (note.fileIds == null || note.fileIds.length == 0)) {
-			renote = await Notes.findOne({
-				id: note.renoteId
-			});
+			renote = await this.db.notes.findOne(note.renoteId);
 		}
 
 		const content = renderActivity(renote
@@ -121,5 +137,65 @@ export class ApServer {
 			: renderDelete(renderTombstone(`${config.url}/notes/${note.id}`), user));
 
 		deliverToFollowers(user, content);
+	}
+
+	public async request(user: LocalUser, url: string, object: any) {
+		const timeout = 10 * 1000;
+	
+		const { protocol, hostname, port, pathname, search } = new URL(url);
+	
+		const data = JSON.stringify(object);
+	
+		const sha256 = crypto.createHash('sha256');
+		sha256.update(data);
+		const hash = sha256.digest('base64');
+	
+		const keypair = await this.getUserKeypair(user.id);
+	
+		await new Promise((resolve, reject) => {
+			const req = https.request({
+				agent: this.agent,
+				protocol,
+				hostname,
+				port,
+				method: 'POST',
+				path: pathname + search,
+				timeout,
+				headers: {
+					'User-Agent': this.userAgent,
+					'Content-Type': 'application/activity+json',
+					'Digest': `SHA-256=${hash}`
+				}
+			}, res => {
+				if (res.statusCode! >= 400) {
+					reject(res);
+				} else {
+					resolve();
+				}
+			});
+	
+			sign(req, {
+				authorizationHeaderName: 'Signature',
+				key: keypair.privateKey,
+				keyId: `${this.url}/users/${user.id}/publickey`,
+				headers: ['date', 'host', 'digest']
+			});
+	
+			// Signature: Signature ... => Signature: ...
+			let sig = req.getHeader('Signature')!.toString();
+			sig = sig.replace(/^Signature /, '');
+			req.setHeader('Signature', sig);
+	
+			req.on('timeout', () => req.abort());
+	
+			req.on('error', e => {
+				if (req.aborted) reject('timeout');
+				reject(e);
+			});
+	
+			req.end(data);
+		});
+	
+		//TODO emit event
 	}
 }
