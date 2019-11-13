@@ -59,28 +59,12 @@ export default async (server: ApServer, actor: RemoteUser, activity: IFollow): P
 	// フォロワーがローカルユーザーであり、フォロー対象がリモートユーザーである
 	// 上記のいずれかに当てはまる場合はすぐフォローせずにフォローリクエストを発行しておく
 	if (followee.isLocked || (isLocalUser(follower) && isRemoteUser(followee))) {
-		let autoAccept = false;
-
 		// 鍵アカウントであっても、既にフォローされていた場合はスルー
 		const following = await server.db.followings.findOne({
 			followerId: follower.id,
 			followeeId: followee.id,
 		});
 		if (following) {
-			autoAccept = true;
-		}
-
-		// フォローしているユーザーは自動承認オプション
-		if (!autoAccept && (isLocalUser(followee) && followeeProfile.autoAcceptFollowed)) {
-			const followed = await server.db.followings.findOne({
-				followerId: followee.id,
-				followeeId: follower.id
-			});
-
-			if (followed) autoAccept = true;
-		}
-
-		if (!autoAccept) {
 			await createFollowRequest(follower, followee, activity.id);
 			return;
 		}
