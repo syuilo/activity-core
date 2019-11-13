@@ -65,7 +65,7 @@ export default async (server: ApServer, actor: RemoteUser, activity: IFollow): P
 			followeeId: followee.id,
 		});
 		if (following) {
-			await createFollowRequest(follower, followee, activity.id);
+			await server.followRequest(follower, followee, activity.id);
 			return;
 		}
 	}
