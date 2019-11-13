@@ -9,7 +9,7 @@ export default async (actor: RemoteUser, activity: IFollow): Promise<void> => {
 	const id = typeof activity.object == 'string' ? activity.object : activity.object.id;
 	if (id == null) throw new Error('missing id');
 
-	if (!id.startsWith(config.url + '/')) {
+	if (!id.startsWith(server.url + '/')) {
 		return;
 	}
 

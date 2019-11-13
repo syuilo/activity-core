@@ -1,28 +1,8 @@
 import * as promiseLimit from 'promise-limit';
-
-import config from '../../../config';
 import Resolver from '../resolver';
-import post from '../../../services/note/create';
-import { resolvePerson, updatePerson } from './person';
-import { resolveImage } from './image';
-import { RemoteUser, User } from '../../../models/entities/user';
-import { parseHtml } from '../../../mfm/parseHtml';
-import { ITag, extractHashtags } from './tag';
-import { unique, concat, difference } from '../../../prelude/array';
-import { extractPollFromQuestion } from './question';
-import vote from '../../../services/note/polls/vote';
-import { apLogger } from '../logger';
-import { File } from '../../../models/entities/drive-file';
-import { deliverQuestionUpdate } from '../../../services/note/polls/update';
-import { extractDbHost, toPuny } from '../../../misc/convert-host';
-import { Notes, Emojis, Polls } from '../../../models';
-import { Note } from '../../../models/entities/note';
 import { IObject, INote, getApIds, getOneApId, getApId, validPost } from '../type';
-import { Emoji } from '../../../models/entities/emoji';
-import { genId } from '../../../misc/gen-id';
-import { fetchMeta } from '../../../misc/fetch-meta';
-import { ensure } from '../../../prelude/ensure';
 import { getApLock } from '../../../misc/app-lock';
+import { Emoji } from '../../../models';
 
 const logger = apLogger;
 
@@ -57,7 +37,7 @@ export async function fetchNote(value: string | IObject, resolver?: Resolver): P
 	const uri = getApId(value);
 
 	// URIがこのサーバーを指しているならデータベースからフェッチ
-	if (uri.startsWith(config.url + '/')) {
+	if (uri.startsWith(server.url + '/')) {
 		const id = uri.split('/').pop();
 		return await Notes.findOne(id).then(x => x || null);
 	}

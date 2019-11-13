@@ -6,15 +6,15 @@ import { Poll } from '../../../models/entities/poll';
 
 export default async function renderVote(user: LocalUser, vote: PollVote, note: Note, poll: Poll, pollOwner: RemoteUser): Promise<any> {
 	return {
-		id: `${config.url}/users/${user.id}#votes/${vote.id}/activity`,
-		actor: `${config.url}/users/${user.id}`,
+		id: `${server.url}/users/${user.id}#votes/${vote.id}/activity`,
+		actor: `${server.url}/users/${user.id}`,
 		type: 'Create',
 		to: [pollOwner.uri],
 		published: new Date().toISOString(),
 		object: {
-			id: `${config.url}/users/${user.id}#votes/${vote.id}`,
+			id: `${server.url}/users/${user.id}#votes/${vote.id}`,
 			type: 'Note',
-			attributedTo: `${config.url}/users/${user.id}`,
+			attributedTo: `${server.url}/users/${user.id}`,
 			to: [pollOwner.uri],
 			inReplyTo: note.uri,
 			name: poll.choices[vote.choice]

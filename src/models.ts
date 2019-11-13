@@ -115,6 +115,11 @@ export type Instance = {
 	infoUpdatedAt: Date;
 };
 
+export type Emoji = {
+	name: string;
+	url: string;
+};
+
 export function isLocalUser(user: User): user is LocalUser {
 	return user.host === null;
 }

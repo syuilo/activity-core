@@ -2,7 +2,7 @@ import config from '../../../config';
 import { Note } from '../../../models/entities/note';
 
 export default (object: any, note: Note) => {
-	const attributedTo = `${config.url}/users/${note.userId}`;
+	const attributedTo = `${server.url}/users/${note.userId}`;
 
 	let to: string[] = [];
 	let cc: string[] = [];
@@ -18,8 +18,8 @@ export default (object: any, note: Note) => {
 	}
 
 	return {
-		id: `${config.url}/notes/${note.id}/activity`,
-		actor: `${config.url}/users/${note.userId}`,
+		id: `${server.url}/notes/${note.id}/activity`,
+		actor: `${server.url}/users/${note.userId}`,
 		type: 'Announce',
 		published: note.createdAt.toISOString(),
 		to,

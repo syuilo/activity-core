@@ -12,7 +12,7 @@ import { LocalUser } from '../../../models';
 export async function renderPerson(server: ApServer, user: LocalUser) {
 	const id = `${server.url}/users/${user.id}`;
 
-	const profile = server.getUserProfile(user.id);
+	const profile = await server.getUserProfile(user.id);
 
 	const attachment: {
 		type: 'PropertyValue',

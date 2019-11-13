@@ -32,7 +32,7 @@ export default async (ctx: Router.RouterContext) => {
 	const renderedNotes = await Promise.all(pinnedNotes.map(note => renderNote(note)));
 
 	const rendered = renderOrderedCollection(
-		`${config.url}/users/${userId}/collections/featured`,
+		`${server.url}/users/${userId}/collections/featured`,
 		renderedNotes.length, undefined, undefined, renderedNotes
 	);
 

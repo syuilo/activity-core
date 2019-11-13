@@ -39,7 +39,7 @@ export default async (ctx: Router.RouterContext) => {
 	}
 
 	const limit = 10;
-	const partOf = `${config.url}/users/${userId}/followers`;
+	const partOf = `${server.url}/users/${userId}/followers`;
 
 	if (page) {
 		const query = {

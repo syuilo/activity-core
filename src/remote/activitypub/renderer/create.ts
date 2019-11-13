@@ -3,8 +3,8 @@ import { Note } from '../../../models/entities/note';
 
 export default (object: any, note: Note) => {
 	const activity = {
-		id: `${config.url}/notes/${note.id}/activity`,
-		actor: `${config.url}/users/${note.userId}`,
+		id: `${server.url}/notes/${note.id}/activity`,
+		actor: `${server.url}/users/${note.userId}`,
 		type: 'Create',
 		published: note.createdAt.toISOString(),
 		object

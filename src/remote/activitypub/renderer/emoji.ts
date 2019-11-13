@@ -2,7 +2,7 @@ import config from '../../../config';
 import { Emoji } from '../../../models/entities/emoji';
 
 export default (emoji: Emoji) => ({
-	id: `${config.url}/emojis/${emoji.name}`,
+	id: `${server.url}/emojis/${emoji.name}`,
 	type: 'Emoji',
 	name: `:${emoji.name}:`,
 	updated: emoji.updatedAt != null ? emoji.updatedAt.toISOString() : new Date().toISOString,

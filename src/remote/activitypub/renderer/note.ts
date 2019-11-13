@@ -35,7 +35,7 @@ export default async function renderNote(note: Note, dive = true): Promise<any> 
 					if (dive) {
 						inReplyTo = await renderNote(inReplyToNote, false);
 					} else {
-						inReplyTo = `${config.url}/notes/${inReplyToNote.id}`;
+						inReplyTo = `${server.url}/notes/${inReplyToNote.id}`;
 					}
 				}
 			}
@@ -50,13 +50,13 @@ export default async function renderNote(note: Note, dive = true): Promise<any> 
 		const renote = await Notes.findOne(note.renoteId);
 
 		if (renote) {
-			quote = renote.uri ? renote.uri : `${config.url}/notes/${renote.id}`;
+			quote = renote.uri ? renote.uri : `${server.url}/notes/${renote.id}`;
 		}
 	}
 
 	const user = await Users.findOne(note.userId).then(ensure);
 
-	const attributedTo = `${config.url}/users/${user.id}`;
+	const attributedTo = `${server.url}/users/${user.id}`;
 
 	const mentions = (JSON.parse(note.mentionedRemoteUsers) as IMentionedRemoteUsers).map(x => x.uri);
 
@@ -94,7 +94,7 @@ export default async function renderNote(note: Note, dive = true): Promise<any> 
 
 	if (poll) {
 		if (text == null) text = '';
-		const url = `${config.url}/notes/${note.id}`;
+		const url = `${server.url}/notes/${note.id}`;
 		// TODO: i18n
 		text += `\n[リモートで結果を表示](${url})`;
 	}
@@ -148,7 +148,7 @@ export default async function renderNote(note: Note, dive = true): Promise<any> 
 	} : {};
 
 	return {
-		id: `${config.url}/notes/${note.id}`,
+		id: `${server.url}/notes/${note.id}`,
 		type: 'Note',
 		attributedTo,
 		summary,

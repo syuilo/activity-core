@@ -5,7 +5,7 @@ export const renderActivity = (x: any) => {
 	if (x == null) return null;
 
 	if (x !== null && typeof x === 'object' && x.id == null) {
-		x.id = `${config.url}/${uuid()}`;
+		x.id = `${server.url}/${uuid()}`;
 	}
 
 	return Object.assign({

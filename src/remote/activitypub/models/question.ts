@@ -44,7 +44,7 @@ export async function updateQuestion(value: any) {
 	const uri = typeof value == 'string' ? value : value.id;
 
 	// URIがこのサーバーを指しているならスキップ
-	if (uri.startsWith(config.url + '/')) throw new Error('uri points local');
+	if (uri.startsWith(server.url + '/')) throw new Error('uri points local');
 
 	//#region このサーバーに既に登録されているか
 	const note = await Notes.findOne({ uri });

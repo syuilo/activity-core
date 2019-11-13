@@ -3,8 +3,8 @@ import { LocalUser } from '../../../models/entities/user';
 import { UserKeypair } from '../../../models/entities/user-keypair';
 
 export default (user: LocalUser, key: UserKeypair) => ({
-	id: `${config.url}/users/${user.id}/publickey`,
+	id: `${server.url}/users/${user.id}/publickey`,
 	type: 'Key',
-	owner: `${config.url}/users/${user.id}`,
+	owner: `${server.url}/users/${user.id}`,
 	publicKeyPem: key.publicKey
 });

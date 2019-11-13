@@ -147,8 +147,8 @@ export class ApServer {
 		}
 
 		const content = renderActivity(renote
-			? renderUndo(renderAnnounce(renote.uri || `${config.url}/notes/${renote.id}`, note), user)
-			: renderDelete(renderTombstone(`${config.url}/notes/${note.id}`), user));
+			? renderUndo(renderAnnounce(renote.uri || `${server.url}/notes/${renote.id}`, note), user)
+			: renderDelete(renderTombstone(`${server.url}/notes/${note.id}`), user));
 
 		deliverToFollowers(user, content);
 	}

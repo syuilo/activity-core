@@ -3,10 +3,10 @@ import { ApServer } from '..';
 
 export const links = [/* (awaiting release) {
 	rel: 'http://nodeinfo.diaspora.software/ns/schema/2.1',
-	href: config.url + nodeinfo2_1path
+	href: server.url + nodeinfo2_1path
 }, */{
 	rel: 'http://nodeinfo.diaspora.software/ns/schema/2.0',
-	href: config.url + nodeinfo2_0path
+	href: server.url + nodeinfo2_0path
 }];
 
 export function cerateNodeinfoRouter(server: ApServer) {

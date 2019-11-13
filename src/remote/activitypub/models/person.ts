@@ -10,7 +10,7 @@ import { toPuny } from '../../../misc/convert-host';
 import { validActor } from '../../../remote/activitypub/type';
 import { toArray } from '../../../prelude/array';
 import { ApServer } from '../../..';
-import { User, RemoteUser, isRemoteUser, Note } from '../../../models';
+import { User, RemoteUser, isRemoteUser, Note, Emoji } from '../../../models';
 import { fetchNodeinfo } from '../../fetch-nodeinfo';
 import { parseHtml } from '../../../parse-html';
 

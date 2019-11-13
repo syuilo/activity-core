@@ -15,7 +15,7 @@ export default async (actor: RemoteUser, activity: IBlock): Promise<void> => {
 
 	logger.info(`UnBlock: ${uri}`);
 
-	if (!id.startsWith(config.url + '/')) {
+	if (!id.startsWith(server.url + '/')) {
 		return;
 	}
 
