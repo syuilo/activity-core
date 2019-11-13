@@ -10,7 +10,7 @@ import { cerateWellKnownRouter } from './server/well-known';
 import { cerateNodeinfoRouter } from './server/nodeinfo';
 import { DB } from './db';
 import { Nodeinfo } from './nodeinfo';
-import { User, UserKeypair, UserProfile, RemoteUser, Note, Instance, LocalUser } from './models';
+import { User, UserKeypair, UserProfile, RemoteUser, Note, Instance, LocalUser, UserPublickey } from './models';
 import { Queue } from './queue';
 
 export type Options = {
@@ -22,7 +22,7 @@ export type Options = {
 	nodeinfo?: () => Promise<Nodeinfo>;
 	getUserKeypair: (userId: User['id']) => Promise<UserKeypair>;
 	getUserProfile: (userId: User['id']) => Promise<UserProfile>;
-	saveUser: (user: User, profile: UserProfile, keypair: UserKeypair) => Promise<User>;
+	saveUser: (user: Omit<User, 'id'>, profile: UserProfile, key: UserPublickey) => Promise<User>;
 	updateFeatured: (user: RemoteUser, ntoes: Note[]) => Promise<void>;
 	onPersonRegistered?: (user: RemoteUser) => void;
 	getInstance?: (host: string) => Promise<Instance>;

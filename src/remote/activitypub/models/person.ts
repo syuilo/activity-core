@@ -1,33 +1,17 @@
 import * as promiseLimit from 'promise-limit';
 
-import config from '../../../config';
 import Resolver from '../resolver';
 import { resolveImage } from './image';
 import { isCollectionOrOrderedCollection, isCollection, IPerson, getApId } from '../type';
-import { DriveFile } from '../../../models/entities/drive-file';
-import { fromHtml } from '../../../mfm/fromHtml';
 import { resolveNote, extractEmojis } from './note';
-import { registerOrFetchInstanceDoc } from '../../../services/register-or-fetch-instance-doc';
 import { ITag, extractHashtags } from './tag';
 import { apLogger } from '../logger';
-import { Note } from '../../../models/entities/note';
-import { updateUsertags } from '../../../services/update-hashtag';
-import { Users, UserNotePinings, Instances, DriveFiles, Followings, UserProfiles, UserPublickeys, isRemoteUser } from '../../../models';
-import { User, RemoteUser } from '../../../models/entities/user';
-import { Emoji } from '../../../models/entities/emoji';
-import { UserNotePining } from '../../../models/entities/user-note-pinings';
-import { genId } from '../../../misc/gen-id';
-import { instanceChart, usersChart } from '../../../services/chart';
-import { UserPublickey } from '../../../models/entities/user-publickey';
-import { isDuplicateKeyValueError } from '../../../misc/is-duplicate-key-value-error';
 import { toPuny } from '../../../misc/convert-host';
-import { UserProfile } from '../../../models/entities/user-profile';
 import { validActor } from '../../../remote/activitypub/type';
-import { getConnection } from 'typeorm';
-import { ensure } from '../../../prelude/ensure';
 import { toArray } from '../../../prelude/array';
-import { fetchNodeinfo } from '../../../services/fetch-nodeinfo';
 import { ApServer } from '../../..';
+import { User, RemoteUser, isRemoteUser, Note } from '../../../models';
+import { fetchNodeinfo } from '../../fetch-nodeinfo';
 
 const logger = apLogger;
 
@@ -95,7 +79,7 @@ export async function fetchPerson(server: ApServer, uri: string): Promise<User |
 	if (typeof uri !== 'string') throw new Error('uri is not string');
 
 	// URIがこのサーバーを指しているならデータベースからフェッチ
-	if (uri.startsWith(config.url + '/')) {
+	if (uri.startsWith(server.url + '/')) {
 		const id = uri.split('/').pop();
 		if (id == null) throw new Error('invalud uri');
 		return await server.db.users.findOne(id).then(x => x || null);
@@ -142,25 +126,25 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 
 	// Create user
 	const user = await server.saveUser({
-		id: genId(),
-		avatarId: null,
-		bannerId: null,
 		createdAt: new Date(),
 		lastFetchedAt: new Date(),
-		name: person.name,
+		name: person.name || null,
+		avatarId: null,
+		bannerId: null,
 		isLocked: !!person.manuallyApprovesFollowers,
-		username: person.preferredUsername,
+		username: person.preferredUsername!,
 		usernameLower: person.preferredUsername!.toLowerCase(),
 		host,
-		inbox: person.inbox,
-		sharedInbox: person.sharedInbox || (person.endpoints ? person.endpoints.sharedInbox : undefined),
-		featured: person.featured ? getApId(person.featured) : undefined,
-		uri: person.id,
+		inbox: person.inbox!,
+		sharedInbox: person.sharedInbox || (person.endpoints ? person.endpoints.sharedInbox || null : null),
+		featured: person.featured ? getApId(person.featured) : null,
+		uri: person.id!,
 		tags,
 		isBot,
+		isSuspended: false,
 	}, {
 		description: person.summary ? fromHtml(person.summary) : null,
-		url: person.url,
+		url: person.url || null,
 		fields,
 		userHost: host,
 	}, {
@@ -228,12 +212,12 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 	if (typeof uri !== 'string') throw new Error('uri is not string');
 
 	// URIがこのサーバーを指しているならスキップ
-	if (uri.startsWith(config.url + '/')) {
+	if (uri.startsWith(server.url + '/')) {
 		return;
 	}
 
 	//#region このサーバーに既に登録されているか
-	const exist = await Users.findOne({ uri }) as RemoteUser;
+	const exist = await server.db.users.findOne({ uri }) as RemoteUser;
 
 	if (exist == null) {
 		return;
@@ -376,7 +360,8 @@ export function analyzeAttachments(attachments: ITag[]) {
 }
 
 export async function updateFeatured(server: ApServer, userId: User['id']) {
-	const user = await Users.findOne(userId).then(ensure);
+	const user = await server.db.users.findOne(userId);
+	if (user == null) return;
 	if (!isRemoteUser(user)) return;
 	if (!user.featured) return;
 

@@ -5,17 +5,21 @@
 
 export type User = {
 	id: string;
+	createdAt: Date;
+	lastFetchedAt: Date;
 	username: string;
+	usernameLower: string;
 	host: string | null;
 	uri: string | null;
 	name: string | null;
-	avatarId: File['id'];
-	bannerId: File['id'];
+	avatarId: File['id'] | null;
+	bannerId: File['id'] | null;
 	tags: string[];
 	isBot: boolean;
 	isLocked: boolean;
 	isSuspended: boolean;
 	inbox: string | null;
+	sharedInbox: string | null;
 	featured: string | null;
 };
 
@@ -32,6 +36,13 @@ export type RemoteUser = User & {
 export type UserProfile = {
 	description: string;
 	fields: { name: string; value: string; }[];
+	url: string | null;
+	userHost: string | null;
+};
+
+export type UserPublickey = {
+	keyId: string;
+	keyPem: string;
 };
 
 export type UserKeypair = {
