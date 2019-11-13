@@ -1,5 +1,5 @@
 import { ApServer } from '../..';
-import { RemoteUser, LocalUser } from '../../models';
+import { RemoteUser, LocalUser, isLocalUser, isRemoteFollower } from '../../models';
 
 //#region types
 interface IRecipe {
@@ -89,7 +89,7 @@ export default class DeliverManager {
 				});
 
 				for (const following of followers) {
-					if (Followings.isRemoteFollower(following)) {
+					if (isRemoteFollower(following)) {
 						const inbox = following.followerSharedInbox || following.followerInbox;
 						if (!inboxes.includes(inbox)) inboxes.push(inbox);
 					}
@@ -114,8 +114,8 @@ export default class DeliverManager {
  * @param activity Activity
  * @param from Followee
  */
-export async function deliverToFollowers(actor: LocalUser, activity: any) {
-	const manager = new DeliverManager(actor, activity);
+export async function deliverToFollowers(server: ApServer, actor: LocalUser, activity: any) {
+	const manager = new DeliverManager(server, actor, activity);
 	manager.addFollowersRecipe();
 	await manager.execute();
 }
@@ -125,8 +125,8 @@ export async function deliverToFollowers(actor: LocalUser, activity: any) {
  * @param activity Activity
  * @param to Target user
  */
-export async function deliverToUser(actor: LocalUser, activity: any, to: RemoteUser) {
-	const manager = new DeliverManager(actor, activity);
+export async function deliverToUser(server: ApServer, actor: LocalUser, activity: any, to: RemoteUser) {
+	const manager = new DeliverManager(server, actor, activity);
 	manager.addDirectRecipe(to);
 	await manager.execute();
 }

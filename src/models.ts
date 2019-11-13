@@ -56,6 +56,36 @@ export type Following = {
 	id: string;
 	followerId: User['id'];
 	followeeId: User['id'];
+	followerHost: string | null;
+	followeeHost: string | null;
+	followerInbox: string | null;
+	followerSharedInbox: string | null;
+	followeeInbox: string | null;
+	followeeSharedInbox: string | null;
+};
+
+type LocalFollowerFollowing = Following & {
+	followerHost: null;
+	followerInbox: null;
+	followerSharedInbox: null;
+};
+
+type RemoteFollowerFollowing = Following & {
+	followerHost: string;
+	followerInbox: string;
+	followerSharedInbox: string;
+};
+
+type LocalFolloweeFollowing = Following & {
+	followeeHost: null;
+	followeeInbox: null;
+	followeeSharedInbox: null;
+};
+
+type RemoteFolloweeFollowing = Following & {
+	followeeHost: string;
+	followeeInbox: string;
+	followeeSharedInbox: string;
 };
 
 export type Blocking = {
@@ -74,4 +104,20 @@ export function isLocalUser(user: User): user is LocalUser {
 
 export function isRemoteUser(user: User): user is RemoteUser {
 	return !isLocalUser(user);
+}
+
+export function isLocalFollower(following: Following): following is LocalFollowerFollowing {
+	return following.followerHost == null;
+}
+
+export function isRemoteFollower(following: Following): following is RemoteFollowerFollowing {
+	return following.followerHost != null;
+}
+
+export function isLocalFollowee(following: Following): following is LocalFolloweeFollowing {
+	return following.followeeHost == null;
+}
+
+export function isRemoteFollowee(following: Following): following is RemoteFolloweeFollowing {
+	return following.followeeHost != null;
 }

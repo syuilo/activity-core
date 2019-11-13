@@ -1,12 +1,14 @@
 import * as request from 'request-promise-native';
 import { IObject, isCollectionOrOrderedCollection, ICollection, IOrderedCollection } from './type';
-import config from '../../config';
+import { ApServer } from '../..';
 
 export default class Resolver {
+	private server: ApServer;
 	private history: Set<string>;
 	private timeout = 10 * 1000;
 
-	constructor() {
+	constructor(server: ApServer) {
+		this.server = server;
 		this.history = new Set();
 	}
 
@@ -43,11 +45,11 @@ export default class Resolver {
 
 		const object = await request({
 			url: value,
-			proxy: config.proxy,
+			proxy: this.server.proxy,
 			timeout: this.timeout,
 			forever: true,
 			headers: {
-				'User-Agent': config.userAgent,
+				'User-Agent': this.server.userAgent,
 				Accept: 'application/activity+json, application/ld+json'
 			},
 			json: true

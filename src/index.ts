@@ -43,6 +43,10 @@ export class ApServer {
 		return new URL(this.url).host;
 	}
 
+	public get proxy() {
+		return this.opts.proxy;
+	}
+
 	public get userAgent() {
 		return this.opts.userAgent || 'ActivityCore';
 	}
@@ -197,5 +201,10 @@ export class ApServer {
 		});
 	
 		//TODO emit event
+	}
+
+	public followRequestAccepted() {
+		const content = renderActivity(renderAccept(renderFollow(follower, followee, request.requestId!), followee as ILocalUser));
+		deliver(followee as ILocalUser, content, follower.inbox);
 	}
 }
