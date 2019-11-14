@@ -1,7 +1,6 @@
 import { IFollow } from '../type';
 import { ApServer } from '../../..';
 import { RemoteUser, isLocalUser } from '../../../models';
-import { renderActivity } from '../renderer';
 
 export default async (server: ApServer, actor: RemoteUser, activity: IFollow): Promise<void> => {
 	const follower = actor;
@@ -27,12 +26,5 @@ export default async (server: ApServer, actor: RemoteUser, activity: IFollow): P
 		throw new Error('フォローしようとしているユーザーはローカルユーザーではありません');
 	}
 
-	const result = await server.activityHandlers.follow(follower, followee);
-
-	if (result === 'success') {
-		const content = renderActivity(renderAccept(renderFollow(follower, followee, activity.id), followee));
-		server.queue.deliver(followee, content, follower.inbox);	
-	} else if (result === 'blocked') {
-		// TODO
-	}
+	await server.activityHandlers.follow(follower, followee, activity.id);
 };
