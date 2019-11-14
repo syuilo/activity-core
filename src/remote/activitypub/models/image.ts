@@ -21,7 +21,7 @@ export async function createImage(server: ApServer, actor: RemoteUser, value: an
 
 	logger.info(`Creating the Image: ${image.url}`);
 
-	const file = await server.fetchFile(image.url, actor, image.sensitive);
+	const file = await server.api.createFile(image.url, actor, image.sensitive);
 
 	return file;
 }

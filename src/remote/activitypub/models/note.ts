@@ -4,16 +4,18 @@ import { IObject, INote, getApIds, getOneApId, getApId, validPost } from '../typ
 import { getApLock } from '../../../misc/app-lock';
 import { Emoji, Note, User, RemoteUser } from '../../../models';
 import { parseHtml } from '../../../parse-html';
-import { resolvePerson } from './person';
+import { resolvePerson, updatePerson } from './person';
 import { ApServer } from '../../..';
 import { resolveImage } from './image';
-import { ITag } from './tag';
-import { toPuny } from '../../../misc/convert-host';
+import { ITag, extractHashtags } from './tag';
+import { toPuny, extractPunyedHost } from '../../../misc/convert-host';
+import { difference, unique, concat } from '../../../prelude/array';
+import { extractPollFromQuestion } from './question';
 
 const logger = apLogger;
 
 export function validateNote(object: any, uri: string) {
-	const expectHost = extractDbHost(uri);
+	const expectHost = extractPunyedHost(uri);
 
 	if (object == null) {
 		return new Error('invalid Note: object is null');
@@ -23,12 +25,12 @@ export function validateNote(object: any, uri: string) {
 		return new Error(`invalid Note: invalid object type ${object.type}`);
 	}
 
-	if (object.id && extractDbHost(object.id) !== expectHost) {
-		return new Error(`invalid Note: id has different host. expected: ${expectHost}, actual: ${extractDbHost(object.id)}`);
+	if (object.id && extractPunyedHost(object.id) !== expectHost) {
+		return new Error(`invalid Note: id has different host. expected: ${expectHost}, actual: ${extractPunyedHost(object.id)}`);
 	}
 
-	if (object.attributedTo && extractDbHost(getOneApId(object.attributedTo)) !== expectHost) {
-		return new Error(`invalid Note: attributedTo has different host. expected: ${expectHost}, actual: ${extractDbHost(object.attributedTo)}`);
+	if (object.attributedTo && extractPunyedHost(getOneApId(object.attributedTo)) !== expectHost) {
+		return new Error(`invalid Note: attributedTo has different host. expected: ${expectHost}, actual: ${extractPunyedHost(object.attributedTo)}`);
 	}
 
 	return null;
@@ -39,17 +41,18 @@ export function validateNote(object: any, uri: string) {
  *
  * サーバーに対象のNoteが登録されていればそれを返します。
  */
-export async function fetchNote(value: string | IObject, resolver?: Resolver): Promise<Note | null> {
+export async function fetchNote(server: ApServer, value: string | IObject, resolver?: Resolver): Promise<Note | null> {
 	const uri = getApId(value);
 
 	// URIがこのサーバーを指しているならデータベースからフェッチ
 	if (uri.startsWith(server.url + '/')) {
 		const id = uri.split('/').pop();
-		return await Notes.findOne(id).then(x => x || null);
+		if (id == null) throw new Error('Invalid URL');
+		return await server.api.findNote(id).then(x => x || null);
 	}
 
 	//#region このサーバーに既に登録されていたらそれを返す
-	const exist = await Notes.findOne({ uri });
+	const exist = await server.api.findNote({ uri });
 
 	if (exist) {
 		return exist;
@@ -87,7 +90,7 @@ export async function createNote(server: ApServer, value: string | IObject, reso
 	logger.info(`Creating the Note: ${note.id}`);
 
 	// 投稿者をフェッチ
-	const actor = await resolvePerson(getOneApId(note.attributedTo), resolver) as RemoteUser;
+	const actor = await resolvePerson(server, getOneApId(note.attributedTo), resolver) as RemoteUser;
 
 	// 投稿者が凍結されていたらスキップ
 	if (actor.isSuspended) {
@@ -112,7 +115,7 @@ export async function createNote(server: ApServer, value: string | IObject, reso
 	}
 	//#endergion
 
-	const apMentions = await extractMentionedUsers(actor, to, cc, resolver);
+	const apMentions = await extractMentionedUsers(server, actor, to, cc, resolver);
 
 	const apHashtags = await extractHashtags(note.tag);
 
@@ -131,7 +134,7 @@ export async function createNote(server: ApServer, value: string | IObject, reso
 
 	// リプライ
 	const reply: Note | null = note.inReplyTo
-		? await resolveNote(note.inReplyTo, resolver).then(x => {
+		? await resolveNote(server, note.inReplyTo, resolver).then(x => {
 			if (x == null) {
 				logger.warn(`Specified inReplyTo, but nout found`);
 				throw new Error('inReplyTo not found');
@@ -148,7 +151,7 @@ export async function createNote(server: ApServer, value: string | IObject, reso
 	let quote: Note | undefined | null;
 
 	if (note._misskey_quote && typeof note._misskey_quote == 'string') {
-		quote = await resolveNote(note._misskey_quote).catch(e => {
+		quote = await resolveNote(server, note._misskey_quote).catch(e => {
 			// 4xxの場合は引用してないことにする
 			if (e.statusCode >= 400 && e.statusCode < 500) {
 				logger.warn(`Ignored quote target ${note.inReplyTo} - ${e.statusCode} `);
@@ -186,18 +189,18 @@ export async function createNote(server: ApServer, value: string | IObject, reso
 		}
 	}
 
-	const emojis = await extractEmojis(note.tag || [], actor.host).catch(e => {
+	const emojis = await extractEmojis(server, note.tag || [], actor.host).catch(e => {
 		logger.info(`extractEmojis: ${e}`);
 		return [] as Emoji[];
 	});
 
 	const apEmojis = emojis.map(emoji => emoji.name);
 
-	const poll = await extractPollFromQuestion(note, resolver).catch(() => undefined);
+	const poll = await extractPollFromQuestion(server, note, resolver).catch(() => undefined);
 
 	// ユーザーの情報が古かったらついでに更新しておく
 	if (actor.lastFetchedAt == null || Date.now() - actor.lastFetchedAt.getTime() > 1000 * 60 * 60 * 24) {
-		if (actor.uri) updatePerson(actor.uri);
+		if (actor.uri) updatePerson(server, actor.uri);
 	}
 
 	return await post(actor, {
@@ -229,13 +232,13 @@ export async function resolveNote(server: ApServer, value: string | IObject, res
 	if (uri == null) throw new Error('missing uri');
 
 	// ブロックしてたら中断
-	if (server.getBlockedHosts().includes(extractDbHost(uri))) throw { statusCode: 451 };
+	if (server.api.getBlockedHosts().includes(extractPunyedHost(uri))) throw { statusCode: 451 };
 
 	const unlock = await getApLock(uri);
 
 	try {
 		//#region このサーバーに既に登録されていたらそれを返す
-		const exist = await fetchNote(uri);
+		const exist = await fetchNote(server, uri);
 
 		if (exist) {
 			return exist;
@@ -261,7 +264,7 @@ export async function extractEmojis(server: ApServer, tags: ITag[], host: string
 	return await Promise.all(eomjiTags.map(async tag => {
 		const name = tag.name!.replace(/^:/, '').replace(/:$/, '');
 
-		const exists = await server.db.emojis.findOne({
+		const exists = await server.api.findEmoji({
 			host,
 			name
 		});
@@ -272,7 +275,7 @@ export async function extractEmojis(server: ApServer, tags: ITag[], host: string
 				|| (tag.updated != null && exists.updatedAt != null && new Date(tag.updated) > exists.updatedAt)
 				|| (tag.icon!.url !== exists.url)
 			) {
-				await server.db.emojis.update({
+				await server.api.updateEmoji({
 					host,
 					name,
 				}, {
@@ -281,7 +284,7 @@ export async function extractEmojis(server: ApServer, tags: ITag[], host: string
 					updatedAt: new Date(),
 				});
 
-				return (await server.db.emojis.findOne({
+				return (await server.api.findEmoji({
 					host,
 					name
 				}))!;
@@ -292,11 +295,11 @@ export async function extractEmojis(server: ApServer, tags: ITag[], host: string
 
 		logger.info(`register emoji host=${host}, name=${name}`);
 
-		return await server.db.emojis.save({
+		return await server.api.createEmoji({
 			host,
 			name,
 			uri: tag.id,
-			url: tag.icon!.url,
+			url: tag.icon!.url!,
 			updatedAt: new Date(),
 		});
 	}));

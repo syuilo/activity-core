@@ -10,7 +10,7 @@ import { toPuny } from '../../../misc/convert-host';
 import { validActor } from '../../../remote/activitypub/type';
 import { toArray } from '../../../prelude/array';
 import { ApServer } from '../../..';
-import { User, RemoteUser, isRemoteUser, Note, Emoji } from '../../../models';
+import { User, RemoteUser, Note, Emoji } from '../../../models';
 import { fetchNodeinfo } from '../../fetch-nodeinfo';
 import { parseHtml } from '../../../parse-html';
 
@@ -174,7 +174,7 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 	const avatarUrl = avatar ? server.api.getFileUrl(avatar, true) : null;
 	const bannerUrl = banner ? server.api.getFileUrl(banner, false) : null;
 
-	await server.db.users.update(user!.id, {
+	await server.api.updateUser(user!.id, {
 		avatarId,
 		bannerId,
 		avatarUrl,
@@ -195,7 +195,7 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 
 	const emojiNames = emojis.map(emoji => emoji.name);
 
-	await server.db.users.update(user!.id, {
+	await server.api.updateUser(user!.id, {
 		emojis: emojiNames
 	});
 	//#endregion
@@ -297,7 +297,7 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 	});
 
 	// 該当ユーザーが既にフォロワーになっていた場合はFollowingもアップデートする
-	await server.db.followings.update({
+	await server.api.updateFollowing({
 		followerId: exist.id
 	}, {
 		followerSharedInbox: person.sharedInbox || (person.endpoints ? person.endpoints.sharedInbox : undefined)
@@ -380,5 +380,5 @@ export async function updateFeatured(server: ApServer, user: RemoteUser) {
 	).filter(note => note != null);
 
 	// Update
-	await server.updateFeatured(user, featuredNotes as Note[]);
+	await server.api.updateFeatured(user, featuredNotes as Note[]);
 }

@@ -101,7 +101,7 @@ export default async (ctx: Router.RouterContext) => {
  */
 export async function packActivity(note: Note): Promise<any> {
 	if (note.renoteId && note.text == null && !note.hasPoll && (note.fileIds == null || note.fileIds.length == 0)) {
-		const renote = await Notes.findOne(note.renoteId).then(ensure);
+		const renote = await server.api.findNote(note.renoteId).then(ensure);
 		return renderAnnounce(renote.uri ? renote.uri : `${server.url}/notes/${renote.id}`, note);
 	}
 

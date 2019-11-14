@@ -5,7 +5,7 @@ import { IAnnounce, IObject, getApId, getApIds } from '../../type';
 import { fetchNote, resolveNote } from '../../models/note';
 import { resolvePerson } from '../../models/person';
 import { apLogger } from '../../logger';
-import { extractDbHost } from '../../../../misc/convert-host';
+import { extractPunyedHost } from '../../../../misc/convert-host';
 import { fetchMeta } from '../../../../misc/fetch-meta';
 import { getApLock } from '../../../../misc/app-lock';
 
@@ -24,7 +24,7 @@ export default async function(resolver: Resolver, actor: RemoteUser, activity: I
 
 	// アナウンス先をブロックしてたら中断
 	const meta = await fetchMeta();
-	if (meta.blockedHosts.includes(extractDbHost(uri))) return;
+	if (meta.blockedHosts.includes(extractPunyedHost(uri))) return;
 
 	const unlock = await getApLock(uri);
 

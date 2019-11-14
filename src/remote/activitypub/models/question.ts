@@ -1,12 +1,9 @@
-import config from '../../../config';
 import Resolver from '../resolver';
-import { IObject, IQuestion, isQuestion,  } from '../type';
-import { apLogger } from '../logger';
-import { Notes, Polls } from '../../../models';
-import { IPoll } from '../../../models/entities/poll';
+import { ApServer } from '../../..';
+import { IQuestion, isQuestion, IObject } from '../type';
 
-export async function extractPollFromQuestion(source: string | IObject, resolver?: Resolver): Promise<IPoll> {
-	if (resolver == null) resolver = new Resolver();
+export async function extractPollFromQuestion(server: ApServer, source: string | IObject, resolver?: Resolver): Promise<IPoll> {
+	if (resolver == null) resolver = new Resolver(server);
 
 	const question = await resolver.resolve(source);
 
@@ -40,14 +37,14 @@ export async function extractPollFromQuestion(source: string | IObject, resolver
  * @param uri URI of AP Question object
  * @returns true if updated
  */
-export async function updateQuestion(value: any) {
+export async function updateQuestion(server: ApServer, value: any) {
 	const uri = typeof value == 'string' ? value : value.id;
 
 	// URIがこのサーバーを指しているならスキップ
 	if (uri.startsWith(server.url + '/')) throw new Error('uri points local');
 
 	//#region このサーバーに既に登録されているか
-	const note = await Notes.findOne({ uri });
+	const note = await server.api.findNote({ uri });
 	if (note == null) throw new Error('Question is not registed');
 
 	const poll = await Polls.findOne({ noteId: note.id });
@@ -55,7 +52,7 @@ export async function updateQuestion(value: any) {
 	//#endregion
 
 	// resolve new Question object
-	const resolver = new Resolver();
+	const resolver = new Resolver(server);
 	const question = await resolver.resolve(value) as IQuestion;
 	apLogger.debug(`fetched question: ${JSON.stringify(question, null, 2)}`);
 

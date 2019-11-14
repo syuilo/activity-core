@@ -13,7 +13,7 @@ export default async (actor: RemoteUser, activity: ILike) => {
 	// xxxx
 	const noteId = id.split('/').pop();
 
-	const note = await Notes.findOne(noteId);
+	const note = await server.api.findNote(noteId);
 	if (note == null) {
 		apLogger.warn(`Like activity recivied, but no such note: ${id}`, { id });
 		return;

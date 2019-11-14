@@ -9,8 +9,10 @@ import { createActivityPubRouter } from './server/activitypub';
 import { cerateWellKnownRouter } from './server/well-known';
 import { cerateNodeinfoRouter } from './server/nodeinfo';
 import { Nodeinfo } from './nodeinfo';
-import { User, UserKeypair, UserProfile, RemoteUser, Note, Instance, LocalUser, UserPublickey, File } from './models';
+import { User, UserKeypair, UserProfile, RemoteUser, Note, Instance, LocalUser, UserPublickey, File, Following, Emoji, Blocking } from './models';
 import { Queue } from './queue';
+import { renderActivity } from './remote/activitypub/renderer';
+import { deliverToFollowers } from './remote/activitypub/deliver-manager';
 
 type Maybe<T> = T | null | undefined;
 
@@ -25,12 +27,28 @@ type API = {
 	 * ユーザー情報を更新するハンドラ
 	 * ハッシュタグデータベースの更新も行うべき
 	 */
-	updateUser: (userId: User['id'], user: Partial<User>, profile: Partial<UserProfile>, key: Partial<UserPublickey>) => Promise<User>;
+	updateUser: (userId: User['id'], user: Partial<User>, profile?: Partial<UserProfile>, key?: Partial<UserPublickey>) => Promise<void>;
+
+	findNote: (query: Note['id'] | Partial<Note>) => Promise<Maybe<Note>>;
+
+	findEmoji: (query: Emoji['id'] | Partial<Emoji>) => Promise<Maybe<Emoji>>;
+
+	createEmoji: (emoji: Omit<Emoji, 'id'>) => Promise<Emoji>;
+
+	updateEmoji: (query: Emoji['id'] | Partial<Emoji>, fields: Partial<Emoji>) => Promise<void>;
+
+	findBlocking: (query: Blocking['id'] | Partial<Blocking>) => Promise<Maybe<Blocking>>;
+
+	findFollowing: (query: Following['id'] | Partial<Following>) => Promise<Maybe<Following>>;
+
+	findFollowings: (query: Partial<Following>) => Promise<Following[]>;
 
 	/**
 	 * ピン留めされた投稿を更新するハンドラ
 	 */
-	updateFeatured: (user: RemoteUser, ntoes: Note[]) => Promise<void>;
+	updateFeatured: (user: RemoteUser, toes: Note[]) => Promise<void>;
+
+	updateFollowing: (query: Partial<Following>, fields: Partial<Following>) => Promise<void>;
 
 	/**
 	 * ファイルをリモートサーバーからダウンロードするハンドラ
@@ -138,14 +156,14 @@ export class ApServer {
 		let renote: Note | undefined;
 
 		if (note.renoteId && note.text == null && !note.hasPoll && (note.fileIds == null || note.fileIds.length == 0)) {
-			renote = await this.db.notes.findOne(note.renoteId);
+			renote = await this.api.findNote(note.renoteId);
 		}
 
 		const content = renderActivity(renote
 			? renderUndo(renderAnnounce(renote.uri || `${server.url}/notes/${renote.id}`, note), user)
 			: renderDelete(renderTombstone(`${server.url}/notes/${note.id}`), user));
 
-		deliverToFollowers(user, content);
+		deliverToFollowers(this, user, content);
 	}
 
 	public async request(user: LocalUser, url: string, object: any) {

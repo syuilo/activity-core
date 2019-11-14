@@ -31,11 +31,11 @@ export default async (server: ApServer, actor: RemoteUser, activity: IFollow): P
 
 	// check blocking
 	const [blocking, blocked] = await Promise.all([
-		server.db.blockings.findOne({
+		server.api.findBlocking({
 			blockerId: follower.id,
 			blockeeId: followee.id,
 		}),
-		server.db.blockings.findOne({
+		server.api.findBlocking({
 			blockerId: followee.id,
 			blockeeId: follower.id,
 		})
@@ -60,7 +60,7 @@ export default async (server: ApServer, actor: RemoteUser, activity: IFollow): P
 	// 上記のいずれかに当てはまる場合はすぐフォローせずにフォローリクエストを発行しておく
 	if (followee.isLocked || (isLocalUser(follower) && isRemoteUser(followee))) {
 		// 鍵アカウントであっても、既にフォローされていた場合はスルー
-		const following = await server.db.followings.findOne({
+		const following = await server.api.findFollowing({
 			followerId: follower.id,
 			followeeId: followee.id,
 		});

@@ -12,7 +12,7 @@ export default async (actor: RemoteUser, activity: ILike): Promise<void> => {
 
 	const noteId = id.split('/').pop();
 
-	const note = await Notes.findOne(noteId);
+	const note = await server.api.findNote(noteId);
 	if (note == null) {
 		throw new Error('note not found');
 	}

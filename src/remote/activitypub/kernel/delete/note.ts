@@ -8,7 +8,7 @@ const logger = apLogger;
 export default async function(actor: RemoteUser, uri: string): Promise<void> {
 	logger.info(`Deleting the Note: ${uri}`);
 
-	const note = await Notes.findOne({ uri });
+	const note = await server.api.findNote({ uri });
 
 	if (note == null) {
 		throw new Error('note not found');

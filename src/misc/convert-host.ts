@@ -10,7 +10,7 @@ export function isSelfHost(host: string) {
 	return toPuny(config.host) === toPuny(host);
 }
 
-export function extractDbHost(uri: string) {
+export function extractPunyedHost(uri: string) {
 	const url = new URL(uri);
 	return toPuny(url.hostname);
 }
