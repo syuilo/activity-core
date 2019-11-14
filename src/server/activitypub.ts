@@ -61,7 +61,7 @@ export function createActivityPubRouter(server: ApServer) {
 	router.get('/notes/:note', async (ctx, next) => {
 		if (!isActivityPubReq(ctx)) return await next();
 
-		const note = await server.api.findNote(ctx.params.note);
+		const note = await server.getters.findNote(ctx.params.note);
 
 		if (note == null || !['public', 'home'].includes(note.visibility)) {
 			ctx.status = 404;
@@ -85,7 +85,7 @@ export function createActivityPubRouter(server: ApServer) {
 
 	// note activity
 	router.get('/notes/:note/activity', async ctx => {
-		const note = await server.api.findNote(ctx.params.note);
+		const note = await server.getters.findNote(ctx.params.note);
 
 		if (note == null || note.userHost != null || !['public', 'home'].includes(note.visibility)) {
 			ctx.status = 404;
@@ -113,7 +113,7 @@ export function createActivityPubRouter(server: ApServer) {
 	router.get('/users/:user/publickey', async ctx => {
 		const userId = ctx.params.user;
 
-		const user = await server.api.findUser(userId);
+		const user = await server.getters.findUser(userId);
 
 		if (user == null || user.host !== null) {
 			ctx.status = 404;
@@ -148,7 +148,7 @@ export function createActivityPubRouter(server: ApServer) {
 
 		const userId = ctx.params.user;
 
-		const user = await server.api.findUser({
+		const user = await server.getters.findUser({
 			id: userId,
 			host: null
 		});
@@ -159,7 +159,7 @@ export function createActivityPubRouter(server: ApServer) {
 	router.get('/@:user', async (ctx, next) => {
 		if (!isActivityPubReq(ctx)) return await next();
 
-		const user = await server.api.findUser({
+		const user = await server.getters.findUser({
 			usernameLower: ctx.params.user.toLowerCase(),
 			host: null
 		});
@@ -169,7 +169,7 @@ export function createActivityPubRouter(server: ApServer) {
 
 	// emoji
 	router.get('/emojis/:emoji', async ctx => {
-		const emoji = await server.api.findEmoji({
+		const emoji = await server.getters.findEmoji({
 			host: null,
 			name: ctx.params.emoji
 		});

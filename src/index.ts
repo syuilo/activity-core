@@ -16,60 +16,6 @@ import { deliverToFollowers } from './remote/activitypub/deliver-manager';
 
 type Maybe<T> = T | null | undefined;
 
-type API = {
-	findUsers: (query: Partial<User>) => Promise<User[]>;
-
-	findUser: (query: User['id'] | Partial<User>) => Promise<Maybe<User>>;
-
-	createUser: (user: Omit<User, 'id'>, profile: UserProfile, key: UserPublickey) => Promise<User>;
-
-	/**
-	 * ユーザー情報を更新するハンドラ
-	 * ハッシュタグデータベースの更新も行うべき
-	 */
-	updateUser: (userId: User['id'], user: Partial<User>, profile?: Partial<UserProfile>, key?: Partial<UserPublickey>) => Promise<void>;
-
-	findNote: (query: Note['id'] | Partial<Note>) => Promise<Maybe<Note>>;
-
-	findPoll: (query: Note['id']) => Promise<Maybe<Poll>>;
-
-	findEmoji: (query: Emoji['id'] | Partial<Emoji>) => Promise<Maybe<Emoji>>;
-
-	createEmoji: (emoji: Omit<Emoji, 'id'>) => Promise<Emoji>;
-
-	updateEmoji: (query: Emoji['id'] | Partial<Emoji>, fields: Partial<Emoji>) => Promise<void>;
-
-	findBlocking: (query: Blocking['id'] | Partial<Blocking>) => Promise<Maybe<Blocking>>;
-
-	findFollowing: (query: Following['id'] | Partial<Following>) => Promise<Maybe<Following>>;
-
-	findFollowings: (query: Partial<Following>) => Promise<Following[]>;
-
-	/**
-	 * ピン留めされた投稿を更新するハンドラ
-	 */
-	updateFeatured: (user: RemoteUser, toes: Note[]) => Promise<void>;
-
-	updateFollowing: (query: Partial<Following>, fields: Partial<Following>) => Promise<void>;
-
-	/**
-	 * ファイルをリモートサーバーからダウンロードするハンドラ
-	 */
-	createFile: (url: string, user: RemoteUser, isSensitive: boolean) => Promise<File>;
-
-	getUserKeypair: (userId: User['id']) => Promise<UserKeypair>;
-
-	getUserProfile: (userId: User['id']) => Promise<UserProfile>;
-
-	getFileUrl: (file: File, thumbnail: boolean) => string;
-
-	getBlockedHosts: () => string[];
-
-	getInstance?: (host: string) => Promise<Instance>;
-
-	setInstance?: (host: string, props: Record<string, any>) => Promise<void>;
-};
-
 export type Options = {
 	url: string;
 	userAgent?: string;
@@ -78,9 +24,67 @@ export type Options = {
 
 	nodeinfo?: () => Promise<Nodeinfo>;
 
-	api: API;
+	getters: {
+		findUsers: (query: Partial<User>) => Promise<User[]>;
 
-	handlers: {
+		findUser: (query: User['id'] | Partial<User>) => Promise<Maybe<User>>;
+	
+		findNote: (query: Note['id'] | Partial<Note>) => Promise<Maybe<Note>>;
+
+		findPoll: (query: Note['id']) => Promise<Maybe<Poll>>;
+	
+		findEmoji: (query: Emoji['id'] | Partial<Emoji>) => Promise<Maybe<Emoji>>;
+
+		findBlocking: (query: Blocking['id'] | Partial<Blocking>) => Promise<Maybe<Blocking>>;
+
+		findFollowing: (query: Following['id'] | Partial<Following>) => Promise<Maybe<Following>>;
+	
+		findFollowings: (query: Partial<Following>) => Promise<Following[]>;	
+
+		getUserKeypair: (userId: User['id']) => Promise<UserKeypair>;
+
+		getUserProfile: (userId: User['id']) => Promise<UserProfile>;
+	
+		getFileUrl: (file: File, thumbnail: boolean) => string;
+	
+		getBlockedHosts: () => string[];
+	
+		getInstance?: (host: string) => Promise<Instance>;
+	};
+
+	actions: {
+		createUser: (user: Omit<User, 'id'>, profile: UserProfile, key: UserPublickey) => Promise<User>;
+
+		/**
+		 * ユーザー情報を更新するハンドラ
+		 * ハッシュタグデータベースの更新も行うべき
+		 */
+		updateUser: (userId: User['id'], user: Partial<User>, profile?: Partial<UserProfile>, key?: Partial<UserPublickey>) => Promise<void>;
+	
+		createEmoji: (emoji: Omit<Emoji, 'id'>) => Promise<Emoji>;
+	
+		updateEmoji: (query: Emoji['id'] | Partial<Emoji>, fields: Partial<Emoji>) => Promise<void>;
+	
+		/**
+		 * ピン留めされた投稿を更新するハンドラ
+		 */
+		updateFeatured: (user: RemoteUser, toes: Note[]) => Promise<void>;
+	
+		updateFollowing: (query: Partial<Following>, fields: Partial<Following>) => Promise<void>;
+	
+		/**
+		 * ファイルをリモートサーバーからダウンロードするハンドラ
+		 */
+		createFile: (url: string, user: RemoteUser, isSensitive: boolean) => Promise<File>;
+	
+		setInstance?: (host: string, props: Record<string, any>) => Promise<void>;
+	};
+
+	activityHandlers: {
+
+	},
+
+	listeners: {
 		/**
 		 * 新しいアカウントが登録されたときに呼ばれます
 		 */
@@ -108,12 +112,20 @@ export class ApServer {
 		return this.opts.userAgent || 'ActivityCore';
 	}
 
-	public get api() {
-		return this.opts.api;
+	public get getters() {
+		return this.opts.getters;
 	}
 
-	public get handlers() {
-		return this.opts.handlers;
+	public get actions() {
+		return this.opts.actions;
+	}
+
+	public get activityHandlers() {
+		return this.opts.activityHandlers;
+	}
+
+	public get listeners() {
+		return this.opts.listeners;
 	}
 
 	public get queue() {
@@ -231,5 +243,14 @@ export class ApServer {
 	public followRequestAccepted() {
 		const content = renderActivity(renderAccept(renderFollow(follower, followee, request.requestId!), followee as ILocalUser));
 		deliver(followee as ILocalUser, content, follower.inbox);
+	}
+
+	public noteCreated() {
+
+	}
+
+	public followRequest() {
+		const content = renderActivity(renderFollow(follower, followee));
+		deliver(follower, content, followee.inbox);
 	}
 }

@@ -6,7 +6,7 @@ import deleteNote from '../../../../services/note/delete';
 export const undoAnnounce = async (actor: RemoteUser, activity: IAnnounce): Promise<void> => {
 	const uri = getApId(activity);
 
-	const note = await server.api.findNote({
+	const note = await server.getters.findNote({
 		uri
 	});
 

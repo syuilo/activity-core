@@ -27,7 +27,7 @@ export default async (ctx: Router.RouterContext) => {
 	});
 
 	const pinnedNotes = await Promise.all(pinings.map(pining =>
-		server.api.findNote(pining.noteId).then(ensure)));
+		server.getters.findNote(pining.noteId).then(ensure)));
 
 	const renderedNotes = await Promise.all(pinnedNotes.map(note => renderNote(note)));
 

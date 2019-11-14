@@ -10,7 +10,7 @@ export default async (server: ApServer, actor: RemoteUser, activity: IAccept): P
 
 	logger.info(`Accept: ${uri}`);
 
-	const resolver = new Resolver();
+	const resolver = new Resolver(server);
 
 	let object;
 
@@ -46,7 +46,7 @@ async function acceptFollow(server: ApServer, actor: RemoteUser, activity: IFoll
 		return;
 	}
 
-	const follower = await server.api.findUser(userId);
+	const follower = await server.getters.findUser(userId);
 
 	if (follower == null) {
 		throw new Error('follower not found');
@@ -56,5 +56,5 @@ async function acceptFollow(server: ApServer, actor: RemoteUser, activity: IFoll
 		throw new Error('フォローリクエストしたユーザーはローカルユーザーではありません');
 	}
 
-	await server.acceptFollow(actor, follower);
+	await server.activityHandlers.acceptFollow(actor, follower);
 }

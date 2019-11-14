@@ -1,13 +1,11 @@
 import Resolver from '../../resolver';
-import post from '../../../../services/note/create';
-import { RemoteUser, User } from '../../../../models/entities/user';
 import { IAnnounce, IObject, getApId, getApIds } from '../../type';
 import { fetchNote, resolveNote } from '../../models/note';
 import { resolvePerson } from '../../models/person';
 import { apLogger } from '../../logger';
 import { extractPunyedHost } from '../../../../misc/convert-host';
-import { fetchMeta } from '../../../../misc/fetch-meta';
 import { getApLock } from '../../../../misc/app-lock';
+import { RemoteUser } from '../../../../models';
 
 const logger = apLogger;
 

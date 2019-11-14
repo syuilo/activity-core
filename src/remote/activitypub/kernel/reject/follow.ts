@@ -1,10 +1,8 @@
-import { RemoteUser } from '../../../../models/entities/user';
-import config from '../../../../config';
-import reject from '../../../../services/following/requests/reject';
+import { ApServer } from '../../../..';
+import { RemoteUser } from '../../../../models';
 import { IFollow } from '../../type';
-import { Users } from '../../../../models';
 
-export default async (actor: RemoteUser, activity: IFollow): Promise<void> => {
+export default async (server: ApServer, actor: RemoteUser, activity: IFollow): Promise<void> => {
 	const id = typeof activity.actor == 'string' ? activity.actor : activity.actor.id;
 	if (id == null) throw new Error('missing id');
 
@@ -12,8 +10,12 @@ export default async (actor: RemoteUser, activity: IFollow): Promise<void> => {
 		return;
 	}
 
-	const follower = await Users.findOne(id.split('/').pop());
+	const userId = id.split('/').pop();
+	if (userId == null) {
+		return;
+	}
 
+	const follower = await server.getters.findUser(userId);
 	if (follower == null) {
 		throw new Error('follower not found');
 	}
@@ -22,5 +24,5 @@ export default async (actor: RemoteUser, activity: IFollow): Promise<void> => {
 		throw new Error('フォローリクエストしたユーザーはローカルユーザーではありません');
 	}
 
-	await reject(actor, follower);
+	await server.activityHandlers.rejectFollow(actor, follower);
 };

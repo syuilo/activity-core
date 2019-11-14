@@ -44,7 +44,7 @@ export async function updateQuestion(server: ApServer, value: any) {
 	if (uri.startsWith(server.url + '/')) throw new Error('uri points local');
 
 	//#region このサーバーに既に登録されているか
-	const note = await server.api.findNote({ uri });
+	const note = await server.getters.findNote({ uri });
 	if (note == null) throw new Error('Question is not registed');
 
 	const poll = await Polls.findOne({ noteId: note.id });

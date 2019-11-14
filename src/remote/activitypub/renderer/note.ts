@@ -23,7 +23,7 @@ export default async function renderNote(note: Note, dive = true): Promise<any> 
 	let inReplyToNote: Note | undefined;
 
 	if (note.replyId) {
-		inReplyToNote = await server.api.findNote(note.replyId);
+		inReplyToNote = await server.getters.findNote(note.replyId);
 
 		if (inReplyToNote != null) {
 			const inReplyToUser = await Users.findOne(inReplyToNote.userId);
@@ -47,7 +47,7 @@ export default async function renderNote(note: Note, dive = true): Promise<any> 
 	let quote;
 
 	if (note.renoteId) {
-		const renote = await server.api.findNote(note.renoteId);
+		const renote = await server.getters.findNote(note.renoteId);
 
 		if (renote) {
 			quote = renote.uri ? renote.uri : `${server.url}/notes/${renote.id}`;

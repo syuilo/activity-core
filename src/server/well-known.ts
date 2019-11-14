@@ -78,7 +78,7 @@ export function cerateWellKnownRouter(server: ApServer) {
 			return;
 		}
 
-		const user = await server.api.findUser(query);
+		const user = await server.getters.findUser(query);
 
 		if (user == null) {
 			ctx.status = 404;

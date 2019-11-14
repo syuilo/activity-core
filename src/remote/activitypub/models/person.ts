@@ -83,11 +83,11 @@ export async function fetchPerson(server: ApServer, uri: string): Promise<User |
 	if (uri.startsWith(server.url + '/')) {
 		const id = uri.split('/').pop();
 		if (id == null) throw new Error('invalud uri');
-		return await server.api.findUser(id).then(x => x || null);
+		return await server.getters.findUser(id).then(x => x || null);
 	}
 
 	//#region このサーバーに既に登録されていたらそれを返す
-	const exist = await server.api.findUser({ uri });
+	const exist = await server.getters.findUser({ uri });
 
 	if (exist) {
 		return exist;
@@ -126,7 +126,7 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 	const isBot = object.type == 'Service';
 
 	// Create user
-	const user = await server.api.createUser({
+	const user = await server.actions.createUser({
 		createdAt: new Date(),
 		lastFetchedAt: new Date(),
 		name: person.name || null,
@@ -171,10 +171,10 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 
 	const avatarId = avatar ? avatar.id : null;
 	const bannerId = banner ? banner.id : null;
-	const avatarUrl = avatar ? server.api.getFileUrl(avatar, true) : null;
-	const bannerUrl = banner ? server.api.getFileUrl(banner, false) : null;
+	const avatarUrl = avatar ? server.getters.getFileUrl(avatar, true) : null;
+	const bannerUrl = banner ? server.getters.getFileUrl(banner, false) : null;
 
-	await server.api.updateUser(user!.id, {
+	await server.actions.updateUser(user!.id, {
 		avatarId,
 		bannerId,
 		avatarUrl,
@@ -195,7 +195,7 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 
 	const emojiNames = emojis.map(emoji => emoji.name);
 
-	await server.api.updateUser(user!.id, {
+	await server.actions.updateUser(user!.id, {
 		emojis: emojiNames
 	});
 	//#endregion
@@ -221,7 +221,7 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 	}
 
 	//#region このサーバーに既に登録されているか
-	const exist = await server.api.findUser({ uri }) as RemoteUser;
+	const exist = await server.getters.findUser({ uri }) as RemoteUser;
 
 	if (exist == null) {
 		return;
@@ -278,16 +278,16 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 
 	if (avatar) {
 		updates.avatarId = avatar.id;
-		updates.avatarUrl = server.api.getFileUrl(avatar, true);
+		updates.avatarUrl = server.getters.getFileUrl(avatar, true);
 	}
 
 	if (banner) {
 		updates.bannerId = banner.id;
-		updates.bannerUrl = server.api.getFileUrl(banner, false);
+		updates.bannerUrl = server.getters.getFileUrl(banner, false);
 	}
 
 	// Update user
-	await server.api.updateUser(exist.id, updates, {
+	await server.actions.updateUser(exist.id, updates, {
 		url: person.url,
 		fields,
 		description: person.summary ? parseHtml(person.summary) : null,
@@ -297,7 +297,7 @@ export async function updatePerson(server: ApServer, uri: string, resolver?: Res
 	});
 
 	// 該当ユーザーが既にフォロワーになっていた場合はFollowingもアップデートする
-	await server.api.updateFollowing({
+	await server.actions.updateFollowing({
 		followerId: exist.id
 	}, {
 		followerSharedInbox: person.sharedInbox || (person.endpoints ? person.endpoints.sharedInbox : undefined)
@@ -380,5 +380,5 @@ export async function updateFeatured(server: ApServer, user: RemoteUser) {
 	).filter(note => note != null);
 
 	// Update
-	await server.api.updateFeatured(user, featuredNotes as Note[]);
+	await server.actions.updateFeatured(user, featuredNotes as Note[]);
 }

@@ -48,11 +48,11 @@ export async function fetchNote(server: ApServer, value: string | IObject, resol
 	if (uri.startsWith(server.url + '/')) {
 		const id = uri.split('/').pop();
 		if (id == null) throw new Error('Invalid URL');
-		return await server.api.findNote(id).then(x => x || null);
+		return await server.getters.findNote(id).then(x => x || null);
 	}
 
 	//#region このサーバーに既に登録されていたらそれを返す
-	const exist = await server.api.findNote({ uri });
+	const exist = await server.getters.findNote({ uri });
 
 	if (exist) {
 		return exist;
@@ -169,7 +169,7 @@ export async function createNote(server: ApServer, value: string | IObject, reso
 
 	// vote
 	if (reply && reply.hasPoll) {
-		const poll = await server.api.findPoll(reply.id);
+		const poll = await server.getters.findPoll(reply.id);
 
 		if (poll == null) throw new Error('Poll not found');
 
@@ -234,7 +234,7 @@ export async function resolveNote(server: ApServer, value: string | IObject, res
 	if (uri == null) throw new Error('missing uri');
 
 	// ブロックしてたら中断
-	if (server.api.getBlockedHosts().includes(extractPunyedHost(uri))) throw { statusCode: 451 };
+	if (server.actions.getBlockedHosts().includes(extractPunyedHost(uri))) throw { statusCode: 451 };
 
 	const unlock = await getApLock(uri);
 
@@ -266,7 +266,7 @@ export async function extractEmojis(server: ApServer, tags: ITag[], host: string
 	return await Promise.all(eomjiTags.map(async tag => {
 		const name = tag.name!.replace(/^:/, '').replace(/:$/, '');
 
-		const exists = await server.api.findEmoji({
+		const exists = await server.getters.findEmoji({
 			host,
 			name
 		});
@@ -277,7 +277,7 @@ export async function extractEmojis(server: ApServer, tags: ITag[], host: string
 				|| (tag.updated != null && exists.updatedAt != null && new Date(tag.updated) > exists.updatedAt)
 				|| (tag.icon!.url !== exists.url)
 			) {
-				await server.api.updateEmoji({
+				await server.actions.updateEmoji({
 					host,
 					name,
 				}, {
@@ -286,7 +286,7 @@ export async function extractEmojis(server: ApServer, tags: ITag[], host: string
 					updatedAt: new Date(),
 				});
 
-				return (await server.api.findEmoji({
+				return (await server.getters.findEmoji({
 					host,
 					name
 				}))!;
@@ -297,7 +297,7 @@ export async function extractEmojis(server: ApServer, tags: ITag[], host: string
 
 		logger.info(`register emoji host=${host}, name=${name}`);
 
-		return await server.api.createEmoji({
+		return await server.actions.createEmoji({
 			host,
 			name,
 			uri: tag.id,
