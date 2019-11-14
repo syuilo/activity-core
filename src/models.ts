@@ -61,6 +61,14 @@ export type Note = {
 	text: string | null;
 	renoteId: Note['id'] | null;
 	tags: string[];
+	hasPoll: boolean;
+};
+
+export type Poll = {
+	choices: string[];
+	votes?: number[];
+	multiple: boolean;
+	expiresAt: Date | null;
 };
 
 export type File = {

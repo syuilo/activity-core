@@ -9,7 +9,7 @@ import { createActivityPubRouter } from './server/activitypub';
 import { cerateWellKnownRouter } from './server/well-known';
 import { cerateNodeinfoRouter } from './server/nodeinfo';
 import { Nodeinfo } from './nodeinfo';
-import { User, UserKeypair, UserProfile, RemoteUser, Note, Instance, LocalUser, UserPublickey, File, Following, Emoji, Blocking } from './models';
+import { User, UserKeypair, UserProfile, RemoteUser, Note, Instance, LocalUser, UserPublickey, File, Following, Emoji, Blocking, Poll } from './models';
 import { Queue } from './queue';
 import { renderActivity } from './remote/activitypub/renderer';
 import { deliverToFollowers } from './remote/activitypub/deliver-manager';
@@ -30,6 +30,8 @@ type API = {
 	updateUser: (userId: User['id'], user: Partial<User>, profile?: Partial<UserProfile>, key?: Partial<UserPublickey>) => Promise<void>;
 
 	findNote: (query: Note['id'] | Partial<Note>) => Promise<Maybe<Note>>;
+
+	findPoll: (query: Note['id']) => Promise<Maybe<Poll>>;
 
 	findEmoji: (query: Emoji['id'] | Partial<Emoji>) => Promise<Maybe<Emoji>>;
 

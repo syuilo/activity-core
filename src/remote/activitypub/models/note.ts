@@ -169,7 +169,9 @@ export async function createNote(server: ApServer, value: string | IObject, reso
 
 	// vote
 	if (reply && reply.hasPoll) {
-		const poll = await Polls.findOne(reply.id).then(ensure);
+		const poll = await server.api.findPoll(reply.id);
+
+		if (poll == null) throw new Error('Poll not found');
 
 		const tryCreateVote = async (name: string, index: number): Promise<null> => {
 			if (poll.expiresAt && Date.now() > new Date(poll.expiresAt).getTime()) {
