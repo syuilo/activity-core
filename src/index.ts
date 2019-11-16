@@ -11,8 +11,9 @@ import { cerateNodeinfoRouter } from './server/nodeinfo';
 import { Nodeinfo } from './nodeinfo';
 import { User, UserKeypair, UserProfile, RemoteUser, Note, Instance, LocalUser, UserPublickey, File, Following, Emoji, Blocking, Poll } from './models';
 import { Queue } from './queue';
-import { renderActivity } from './remote/activitypub/renderer';
-import { deliverToFollowers } from './remote/activitypub/deliver-manager';
+import { renderActivity } from './activitypub/renderer';
+import { deliverToFollowers } from './activitypub/deliver-manager';
+import { IFollow, IBlock, IAnnounce, ILike } from './activitypub/type';
 
 type Maybe<T> = T | null | undefined;
 
@@ -60,6 +61,11 @@ export type Options = {
 		 * ハッシュタグデータベースの更新も行うべき
 		 */
 		updateUser: (userId: User['id'], user: Partial<User>, profile?: Partial<UserProfile>, key?: Partial<UserPublickey>) => Promise<void>;
+
+		/**
+		 * 投稿をデータベースに保存するハンドラ
+		 */
+		insertNoteSilently: (user: RemoteUser, note: Omit<Note, 'id'>) => Promise<Note>;
 	
 		createEmoji: (emoji: Omit<Emoji, 'id'>) => Promise<Emoji>;
 	
@@ -81,7 +87,10 @@ export type Options = {
 	};
 
 	activityHandlers: {
-
+		undoFollow: (actor: RemoteUser, object: IFollow) => Promise<void>;
+		undoBlock: (actor: RemoteUser, object: IBlock) => Promise<void>;
+		undoLike: (actor: RemoteUser, object: ILike) => Promise<void>;
+		undoAnnounce: (actor: RemoteUser, object: IAnnounce) => Promise<void>;
 	},
 
 	listeners: {

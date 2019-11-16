@@ -2,10 +2,10 @@ import * as Router from '@koa/router';
 import * as json from 'koa-json-body';
 import * as httpSignature from 'http-signature';
 
-import { renderActivity } from '../remote/activitypub/renderer';
-import renderNote from '../remote/activitypub/renderer/note';
-import renderKey from '../remote/activitypub/renderer/key';
-import { renderPerson } from '../remote/activitypub/renderer/person';
+import { renderActivity } from '../activitypub/renderer';
+import renderNote from '../activitypub/renderer/note';
+import renderKey from '../activitypub/renderer/key';
+import { renderPerson } from '../activitypub/renderer/person';
 import Outbox, { packActivity } from './activitypub/outbox';
 import Followers from './activitypub/followers';
 import Following from './activitypub/following';

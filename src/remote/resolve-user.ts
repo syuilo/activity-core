@@ -1,6 +1,6 @@
 import webFinger from './webfinger';
 import config from '../config';
-import { createPerson, updatePerson } from './activitypub/models/person';
+import { createPerson, updatePerson } from '../activitypub/models/person';
 import { remoteLogger } from './logger';
 import chalk from 'chalk';
 import { User, RemoteUser } from '../models/entities/user';

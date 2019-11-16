@@ -3,13 +3,13 @@ import config from '../../config';
 import $ from 'cafy';
 import { ID } from '../../misc/cafy-id';
 import * as url from '../../prelude/url';
-import { renderActivity } from '../../remote/activitypub/renderer';
-import renderOrderedCollection from '../../remote/activitypub/renderer/ordered-collection';
-import renderOrderedCollectionPage from '../../remote/activitypub/renderer/ordered-collection-page';
-import renderFollowUser from '../../remote/activitypub/renderer/follow-user';
+import { renderActivity } from '../../activitypub/renderer';
+import renderOrderedCollection from '../../activitypub/renderer/ordered-collection';
+import renderOrderedCollectionPage from '../../activitypub/renderer/ordered-collection-page';
+import renderFollowUser from '../../activitypub/renderer/follow-user';
 import { setResponseType } from '../activitypub';
 import { Users, Followings } from '../../models';
-import { LessThan, FindConditions } from 'typeorm';
+import { LessThan, FindConditions } from '../../activitypub/renderer/node_modules/typeorm';
 import { Following } from '../../models/entities/following';
 
 export default async (ctx: Router.RouterContext) => {
