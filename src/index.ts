@@ -53,7 +53,7 @@ export type Options = {
 		getInstance?: (host: string) => Promise<Instance>;
 	};
 
-	actions: {
+	mutations: {
 		createUser: (user: Omit<User, 'id'>, profile: UserProfile, key: UserPublickey) => Promise<User>;
 
 		/**
@@ -92,13 +92,6 @@ export type Options = {
 		undoLike: (actor: RemoteUser, object: ILike) => Promise<void>;
 		undoAnnounce: (actor: RemoteUser, object: IAnnounce) => Promise<void>;
 	},
-
-	listeners: {
-		/**
-		 * 新しいアカウントが登録されたときに呼ばれます
-		 */
-		onPersonRegistered?: (user: RemoteUser) => void;
-	};
 };
 
 export class ApServer {
@@ -125,16 +118,12 @@ export class ApServer {
 		return this.opts.getters;
 	}
 
-	public get actions() {
-		return this.opts.actions;
+	public get mutations() {
+		return this.opts.mutations;
 	}
 
 	public get activityHandlers() {
 		return this.opts.activityHandlers;
-	}
-
-	public get listeners() {
-		return this.opts.listeners;
 	}
 
 	public get queue() {

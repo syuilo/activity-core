@@ -156,7 +156,6 @@ export async function createPerson(server: ApServer, uri: string, resolver?: Res
 		keyPem: person.publicKey.publicKeyPem,
 	}) as RemoteUser;
 
-	if (server.listeners.onPersonRegistered) server.listeners.onPersonRegistered(user);
 	fetchNodeinfo(server, host);
 
 	//#region アバターとヘッダー画像をフェッチ
